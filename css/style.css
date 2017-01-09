@@ -1,0 +1,95 @@
+
+body.tools_page_integrity-checker_options .scan-summary a,
+#checksum-quota a.refreshQuota,
+body.tools_page_integrity-checker_options a.updateApiKey,
+body.tools_page_integrity-checker_options a.submitEmailBtn {
+    text-align: center;
+}
+
+body.tools_page_integrity-checker_options table.scan-result {
+    width: 100%;
+}
+
+body.tools_page_integrity-checker_options table.scan-result thead {
+    font-weight: bold;
+}
+
+body.tools_page_integrity-checker_options table.scan-result tbody tr:nth-child(even) {
+    background: #ffffff;
+}
+
+body.tools_page_integrity-checker_options table.scan-result tbody tr:nth-child(odd) {
+    background: #eeeeee;
+}
+
+body.tools_page_integrity-checker_options .scan-results div.scan-results-item {
+    min-height: 30px;
+}
+
+body.tools_page_integrity-checker_options .scan-results div.scan-results-item a.itemIssuesToggle {
+    float: right;
+}
+
+body.tools_page_integrity-checker_options .scan-results div.scan-results-item a.itemIssuesToggle:hover {
+    cursor:pointer;
+}
+
+body.tools_page_integrity-checker_options .fa.red,
+body.tools_page_integrity-checker_options .item-type.red {
+    color: darkred;
+}
+
+body.tools_page_integrity-checker_options .fa.green {
+    color: green;
+}
+
+body.tools_page_integrity-checker_options .fa.orange,
+body.tools_page_integrity-checker_options .item-type.orange {
+    color: darkorange;
+}
+
+#updateKeyMessage.red,
+#submitEmailMessage.red{
+    color: darkred;
+}
+
+#updateKeyMessage.green,
+#submitEmailMessage.green {
+    color: green;
+}
+
+.tools_page_integrity-checker_options textarea.diagnostic {
+    width: 100%;
+    min-height: 200px;
+    font-family: Consolas, Monaco, monospace;
+    margin-bottom: 5px;
+}
+
+#checksum-quota {
+    min-height: 172px;
+}
+
+#checksum-quota .quotainfo td {
+    vertical-align: top;
+}
+
+table.diff.ui-dialog-content thead tr th {
+    text-align: left;
+}
+
+table.diff.ui-dialog-content tbody tr {
+    height: 18px;
+}
+table.diff.ui-dialog-content tbody tr td {
+    font-size: 12px;
+    line-height: 13px;
+    padding: 0px;
+}
+
+table.diff .diff-addedline {
+    background-color: #aaffaa
+}
+
+div.card {
+    max-width: 100%;
+}
