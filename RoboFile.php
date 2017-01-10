@@ -10,11 +10,6 @@ class RoboFile extends \Robo\Tasks
     private $slug = 'integrity-checker';
     private $excludeSvn = ['build', 'tests', 'phpunit.xml', 'RoboFile.php', 'composer.lock'];
 
-    public function hello($world)
-    {
-        $this->say("Hello $world");
-    }
-
     /**
      * Tag the current version in git and push the
      * new tag to the remote (origin)
