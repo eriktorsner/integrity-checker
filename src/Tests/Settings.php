@@ -280,15 +280,19 @@ class Settings extends BaseTest
 	 */
 	public function versionLeak($job)
     {
-        $generator = apply_filters('the_generator', '');
+        global $wp_version;
+        $generator = strpos(
+            apply_filters('the_generator', get_the_generator('html'), 'html'),
+            $wp_version
+        );
         $readMe = file_exists(ABSPATH . '/readme.html');
 
 	    $this->transientState['versionLeak'] = array(
 		    'name' => __('WordPress version leak', 'integrity-checker'),
 		    'slug' => 'versionLeak',
 		    'type' => 'obscurity',
-            'acceptable' => (!$generator && !$readMe),
-            'result' => (!$generator && !$readMe)?
+            'acceptable' => ($generator === false && !$readMe),
+            'result' => ($generator === false && !$readMe)?
                 __('You are hiding your WordPress version', 'integrity-checker'):
                 __('You are NOT hiding your WordPress version', 'integrity-checker'),
             'description' => __(
