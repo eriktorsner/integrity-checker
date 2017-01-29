@@ -114,6 +114,7 @@ class integrityChecker
         {
             // Allow our own classes to register admin page etc.
             $this->registerClasses();
+
         }
 
         // Load plugin text domain
@@ -146,7 +147,7 @@ class integrityChecker
     {
         if (is_admin()) {
 
-            $adminObjects = array(new AdminPage(),);
+            $adminObjects = array(new AdminPage(), new AdminUIHooks());
             foreach ($adminObjects as $obj) {
                 $obj->register();
             }
