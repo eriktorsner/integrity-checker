@@ -29,6 +29,7 @@ iCheckBootstrap();
 
 function iCheckBootstrap()
 {
+    $pluginVersion = '0.9.3';
 	if (defined('DOING_AJAX') && DOING_AJAX) {
 		return;
 	}
@@ -38,6 +39,10 @@ function iCheckBootstrap()
 
         if (!defined('INTEGRITY_CHECKER_ROOT')) {
             define('INTEGRITY_CHECKER_ROOT', __DIR__);
+        }
+
+        if (!defined('INTEGRITY_CHECKER_VERSION')) {
+            define('INTEGRITY_CHECKER_VERSION', $pluginVersion);
         }
 
         $iCheck = integrityChecker\integrityChecker::getInstance();
