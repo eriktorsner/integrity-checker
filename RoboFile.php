@@ -98,10 +98,17 @@ class RoboFile extends \Robo\Tasks
              ->regex('~Stable tag:\s.*~')
              ->to('Stable tag: ' . $version)
              ->run();
+
         $this->taskReplaceInFile($this->slug . '.php')
              ->regex('~Version:\s*.*~')
              ->to('Version:           ' . $version)
              ->run();
+
+        $this->taskReplaceInFile($this->slug . '.php')
+             ->regex('~\$pluginVersion\s*\=.*;~')
+             ->to("\$pluginVersion = '$version';")
+             ->run();
+
     }
 
     /**
