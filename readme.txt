@@ -22,6 +22,11 @@ Lastly, Integrity-checker will look through some of the basic WordPress configur
 * Makes it easy to find issues with file permissions
 * Detects common configuration problems
 
+= 3rd party software =
+
+[cron-expression](https://github.com/mtdowling/cron-expression) copyright Michael Dowling, see [license](https://raw.githubusercontent.com/mtdowling/cron-expression/v1.1.0/LICENSE). Cron-expression is slightly adopted to use the Integrity Checker namespace to avoid potential conflicts.
+
+[php-diff](https://github.com/chrisboulton/php-diff) copyright Chris Boulton under the [BSD license](https://opensource.org/licenses/BSD-3-Clause). php-diff is slightly adopted to use the Integrity Checker namespace to avoid potential conflicts.
 
 == Installation ==
 
@@ -93,6 +98,14 @@ The API keys can be shared between different WordPress installations and between
 4. Showing results from scanning WordPress settings. 
 
 == Changelog ==
+
+= 0.9.4 =
+* Feature: Support for alternative checksum data, reduces the risk for false positives
+* Feature: Reinstall compromised plugins
+* Fix: Missed-wp-version-meta in version leak test. reported by @sixer
+
+= 0.9.3 =
+* First version on WordPress repo
 
 = 0.9.1 =
 * Ripped out CMB2, more/better docblocks
