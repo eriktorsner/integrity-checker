@@ -1,38 +1,108 @@
 jQuery(document).ready(function($) {
 
+    /**
+     * Wrapper for REST calls
+     *
+     * @param endpoint  url
+     * @param f         onSuccess function
+     * @param fError    onError function
+     * @param headers   Additional headers
+     */
+    getRest = function (endpoint, f, fError, headers) {
+        rest('GET', endpoint, null, f, fError, headers);
+    };
+
+    /**
+     * Wrapper for REST calls
+     *
+     * @param endpoint  url
+     * @param postData  Object
+     * @param f         onSuccess function
+     * @param fError    onError function
+     * @param headers   Additional headers
+     */
+    putRest = function (endpoint, postData, f, fError, headers) {
+        rest('PUT', endpoint, JSON.stringify(postData), f, fError, headers);
+    };
+
+    /**
+     * Wrapper for REST calls
+     *
+     * @param endpoint  url
+     * @param postData  Object
+     * @param f         onSuccess function
+     * @param fError    onError function
+     * @param headers   Additional headers
+     */
+    postRest = function (endpoint, postData, f, fError, headers) {
+        rest('POST', endpoint, JSON.stringify(postData), f, fError, headers);
+    };
+
+    /**
+     * Wrapper for REST calls
+     *
+     * @param method    GET|POST|PUT
+     * @param endpoint  url
+     * @param postData  Object
+     * @param f         onSuccess function
+     * @param fError    onError function
+     * @param headers   Additional headers
+     */
+    rest = function (method, endpoint, postData, f, fError, headers) {
+        var base = integrityCheckerApi.url;
+        var intendedMethod = method;
+        if (method == 'PUT' || method == 'PATCH' || method == 'DELETE') {
+            method = 'POST';
+        }
+
+        var args = {
+            type: method,
+            headers: {
+                'X-HTTP-Method-Override': intendedMethod,
+                'X-WP-NONCE': integrityCheckerApi.nonce
+            },
+            url: base + endpoint
+        };
+
+        if (headers) {
+            var names = Object.keys(headers);
+            for(var i=0;i<names.length;i++) {
+                var name = names[i];
+                args.headers[name] = headers[name];
+            }
+        }
+
+        if (postData && postData.length > 0) {
+            args.data = postData;
+            args.contentType = 'application/json';
+        }
+
+        $.ajax(args).then(function(data) {
+            f(data);
+        }, function (data) {
+            if (fError) fError(data);
+        });
+    };
+
     tabSwitch();
     renderChecksumScanResults();
-    renderPermissionScanResults();
+    renderFilesScanResults();
     renderSettingsScanResults();
-    renderAboutTab();
 
     $('a.itemIssuesToggle').live('click', function(e) {
         var slug = $(this).data('slug');
         $('#scan-plugins-' + slug).toggle();
     });
 
-    $('a.refreshQuota').live('click', function (e) {
-        e.preventDefault();
-        var refreshBtn = $(this);
-        refreshBtn.data('orgtxt', refreshBtn.html());
-        refreshBtn.css('width', refreshBtn.outerWidth());
-        refreshBtn.html('<i class="fa fa-spinner fa-spin"></i>');
-        refreshBtn.prop("disabled", true);
-        renderAboutTab();
-    });
+
 
     $('a.startScan').live('click', function (e) {
         e.preventDefault();
-
-        // Set spinner, poller, disable btn and send async
         var startScanBtn = $(this);
-        startScanBtn.data('orgtxt', startScanBtn.html());
-        startScanBtn.css('width', startScanBtn.outerWidth());
-        startScanBtn.html('<i class="fa fa-spinner fa-spin"></i>');
-        startScanBtn.prop("disabled", true);
+        startSpin(startScanBtn);
         var scanType = startScanBtn.data('scantype');
 
-        var state = {state:'started'};
+        var state = {state:'started', source:'manual'};
         putRest('/integrity-checker/v1/process/status/' + scanType, state, function(data) {
             renderResults(data, scanType, startScanBtn);
         });
@@ -47,11 +117,16 @@ jQuery(document).ready(function($) {
         var file = btn.data('file');
 
         var url = '/integrity-checker/v1/diff/'+type+'/'+slug;
-        getRest(url, function(data) {
-            showDiff(data);
-        }, function(data) {
-            showDiffError(data);
-        }, {'X-Filename': file});
+        getRest(
+            url,
+            function(data) {
+                showDiff(data);
+            },
+            function(data) {
+                showDiffError(data);
+            },
+            {'X-Filename': file}
+        );
     });
 
     $('.opt-tab').on('click', function(e) {
@@ -62,10 +137,7 @@ jQuery(document).ready(function($) {
     $('a.updateApiKey').live('click', function (e) {
         e.preventDefault();
         var updateBtn = $(this);
-        updateBtn.data('orgtxt', updateBtn.html());
-        updateBtn.css('width', updateBtn.outerWidth());
-        updateBtn.html('<i class="fa fa-spinner fa-spin"></i>');
-        updateBtn.prop("disabled", true);
+        startSpin(updateBtn);
 
         var newKey = $('#apikey').val();
         var postData = {'apiKey': newKey};
@@ -96,11 +168,7 @@ jQuery(document).ready(function($) {
     $('a.submitEmailBtn').live('click', function (e) {
         e.preventDefault();
         var btn = $(this);
-        btn.data('orgtxt', btn.html());
-        btn.css('width', btn.outerWidth());
-        btn.html('<i class="fa fa-spinner fa-spin"></i>');
-        btn.prop("disabled", true);
-
+        startSpin(btn);
         var email = $('#submitEmail').val();
         var postData = {'email': email};
 
@@ -158,8 +226,16 @@ jQuery(document).ready(function($) {
      */
     function renderResults(data, process, startScanBtn)
     {
-        i = 0;
+        var scanType = startScanBtn.data('scantype');
+
         if (data.data.state != 'finished') {
+            if (data.data.jobCount) {
+                var scanStatus = $('div.scanStatus.' + scanType);
+                var scanStatusCount = $('div.scanStatus.' + scanType + ' > span')
+                scanStatus.show();
+                scanStatusCount.html(data.data.jobCount);
+            }
+
             setTimeout(function() {
                     getRest('/integrity-checker/v1/process/status/' + process + '?esc=1', function(data) {
                     renderResults(data, process, startScanBtn);
@@ -167,14 +243,13 @@ jQuery(document).ready(function($) {
                 5000
             );
         } else {
-            var scanType = startScanBtn.data('scantype');
             startScanBtn.html(startScanBtn.data('orgtxt'));
             switch (scanType) {
                 case 'checksum':
                     renderChecksumScanResults();
                     break;
                 case 'permissions':
-                    renderPermissionScanResults();
+                    renderFilesScanResults();
                     break;
                 case 'settings':
                     renderSettingsScanResults();
@@ -230,23 +305,31 @@ jQuery(document).ready(function($) {
     /**
      *
      */
-    function renderPermissionScanResults()
+    function renderFilesScanResults()
     {
-        var scanSummary = $('#permissions-scan-summary');
-        var scanResults = $('#permissions-scan-results');
+        var scanSummary = $('#files-scan-summary');
+        var scanPermResults = $('#files-ownerandpermission-scan-results');
+        var scanMonitorResults = $('#files-monitor-scan-results');
 
         getRest('/integrity-checker/v1/process/status/permissions' + '?esc=1', function (data) {
             scanSummary.html('');
-            var summaryTmpl = wp.template('permissionsSummaryTmpl');
+            var summaryTmpl = wp.template('filesSummaryTmpl');
             $('<div></div>').html(summaryTmpl(data.data)).appendTo(scanSummary);
         });
 
-        getRest('/integrity-checker/v1/testresult/permissions' + '?esc=1', function (data) {
-            scanResults.html('');
+        getRest('/integrity-checker/v1/testresult/modifiedfiles' + '?esc=1', function (data) {
+            scanMonitorResults.html('');
             if (data.data) {
-                var issuesTmpl = wp.template('permissionsIssuesTmpl');
-                $('<h3>Issues</h3>').appendTo(scanResults);
-                $('<div></div>').html(issuesTmpl(data.data)).appendTo(scanResults);
+                var issuesTmpl = wp.template('filesMonitorIssuesTmpl');
+                $('<div></div>').html(issuesTmpl(data.data)).appendTo(scanMonitorResults);
+            }
+        });
+
+        getRest('/integrity-checker/v1/testresult/permissions' + '?esc=1', function (data) {
+            scanPermResults.html('');
+            if (data.data) {
+                var issuesTmpl = wp.template('filesMaskOwnerIssuesTmpl');
+                $('<div></div>').html(issuesTmpl(data.data)).appendTo(scanPermResults);
             }
         });
     }
@@ -310,95 +393,6 @@ jQuery(document).ready(function($) {
     }
 
     /**
-     *
-     */
-    function renderAboutTab() {
-        var quotaInfo = $('#checksum-quota');
-        getRest('/integrity-checker/v1/quota' + '?esc=1', function (data) {
-            quotaInfo.html('');
-            var quotaTmpl = wp.template('quotaTmpl');
-            $('<div></div>').html(quotaTmpl(data.data)).appendTo(quotaInfo);
-
-            var refreshBtn = $('.refreshQuota');
-            if (refreshBtn.data('orgtxt')) {
-                refreshBtn.html(refreshBtn.data('orgtxt'));
-                refreshBtn.prop("disabled", false);
-            }
-        });
-    }
-
-    /**
-     * Wrapper for REST calls
-     *
-     * @param endpoint  url
-     * @param f         onSuccess function
-     * @param fError    onError function
-     * @param headers   Additional headers
-     */
-    function getRest(endpoint, f, fError, headers) {
-        rest('GET', endpoint, null, f, fError, headers);
-    }
-
-    /**
-     * Wrapper for REST calls
-     *
-     * @param endpoint  url
-     * @param postData  Object
-     * @param f         onSuccess function
-     * @param fError    onError function
-     * @param headers   Additional headers
-     */
-    function putRest(endpoint, postData, f, fError, headers) {
-        rest('PUT', endpoint, JSON.stringify(postData), f, fError, headers);
-    }
-
-    /**
-     * Wrapper for REST calls
-     *
-     * @param method    GET|POST|PUT
-     * @param endpoint  url
-     * @param postData  Object
-     * @param f         onSuccess function
-     * @param fError    onError function
-     * @param headers   Additional headers
-     */
-    function rest(method, endpoint, postData, f, fError, headers) {
-        var base = integrityCheckerApi.url;
-        var intendedMethod = method;
-        if (method == 'PUT' || method == 'PATCH' || method == 'DELETE') {
-            method = 'POST';
-        }
-
-        var args = {
-            type: method,
-            headers: {
-                'X-HTTP-Method-Override': intendedMethod,
-                'X-WP-NONCE': integrityCheckerApi.nonce
-            },
-            url: base + endpoint
-        };
-
-        if (headers) {
-            var names = Object.keys(headers);
-            for(var i=0;i<names.length;i++) {
-                var name = names[i];
-                args.headers[name] = headers[name];
-            }
-        }
-
-        if (postData && postData.length > 0) {
-            args.data = postData;
-            args.contentType = 'application/json';
-        }
-
-        $.ajax(args).then(function(data) {
-            f(data);
-        }, function (data) {
-            if (fError) fError(data);
-        });
-    }
-
-    /**
      * Show diff in a popup
      *
      * @param diff The HTML to dislpay
@@ -454,17 +448,7 @@ jQuery(document).ready(function($) {
         });
     }
 
-    /**
-     * Make a button spin
-     *
-     * @param btn
-     */
-    function startSpin(btn) {
-        btn.data('orgtxt', btn.html());
-        btn.css('width', btn.outerWidth());
-        btn.html('<i class="fa fa-spinner fa-spin"></i>');
-        btn.prop("disabled", true);
-    }
+
 
     /**
      * GETQ
@@ -532,6 +516,8 @@ jQuery(document).ready(function($) {
  * Utils - global name space
  */
 
+var rest, getRest, putRest, postRest;
+
 /**
  * Convert bytes to a human readable form
  *
@@ -542,4 +528,16 @@ function humanFileSize(size) {
     var i = Math.floor( Math.log(size) / Math.log(1024) );
     if (size == 0) return '-';
     return ( size / Math.pow(1024, i) ).toFixed(2) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+}
+
+/**
+ * Make a button spin
+ *
+ * @param btn
+ */
+function startSpin(btn) {
+    btn.data('orgtxt', btn.html());
+    btn.css('width', btn.outerWidth());
+    btn.html('<i class="fa fa-spinner fa-spin"></i>');
+    btn.prop("disabled", true);
 }
