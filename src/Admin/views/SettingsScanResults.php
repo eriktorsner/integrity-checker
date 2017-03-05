@@ -7,6 +7,8 @@
     <# if (data.state == 'finished') {#>
         <p>
             <strong><?php _e('Last scan finished', 'integrity-checker');?></strong>: {{{data.finishedIso}}}
+            <?php _e('and took', 'integrity-checker');?>
+            <strong>{{{data.finished - data.started}}} <?php _e('seconds', 'integrity-checker');?></strong>
         </p>
         <# } #>
 
@@ -17,9 +19,15 @@
                 </a>
                 <# } #>
 
-                    <# if (data.state != 'started') {#>
-                        <a class="button-primary startScan" data-scantype="<?php echo $scanType;?>"><?php _e('Scan now', 'integrity-checker' ) ?></a>
-                        <# } #>
+                <# if (data.state != 'started') {#>
+                    <a class="button-primary startScan" data-scantype="<?php echo $scanType;?>"><?php _e('Scan now', 'integrity-checker' ) ?></a>
+                <# } #>
+
+                <div class="scanStatus <?php echo $scanType;?>" style="display: none;">
+                    <span class="jobCount"></span>
+                    <?php _e("checks to go", "integrity-checker");?>
+                </div>
+
         <p>
             <?php _e('This tool examines miscellaneous WordPress settings for potential security issues.', 'integrity-checker');?>
             <br>

@@ -29,6 +29,7 @@ class Settings extends BaseTest
 	    $this->session = $bgProcess->session;
 
 	    parent::start($request);
+        $this->transientState = array();
 
 	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'allowFileEdit'));
 	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'dbCredentials'));
@@ -285,6 +286,7 @@ class Settings extends BaseTest
             apply_filters('the_generator', get_the_generator('html'), 'html'),
             $wp_version
         );
+
         $readMe = file_exists(ABSPATH . '/readme.html');
 
 	    $this->transientState['versionLeak'] = array(
@@ -293,8 +295,8 @@ class Settings extends BaseTest
 		    'type' => 'obscurity',
             'acceptable' => ($generator === false && !$readMe),
             'result' => ($generator === false && !$readMe)?
-                __('You are hiding your WordPress version', 'integrity-checker'):
-                __('You are NOT hiding your WordPress version', 'integrity-checker'),
+                __('You are not showing your WordPress version', 'integrity-checker'):
+                __('You are showing your WordPress version.', 'integrity-checker'),
             'description' => __(
                 'By default, WordPress shows its version via a tag on each page and a publicly available readme file '.
                 'that comes with each version of WordPress. By making it easy to determine what version of WordPress '.
@@ -302,6 +304,16 @@ class Settings extends BaseTest
                 'integrity-checker'
             ),
         );
+
+        if ($generator !== false) {
+            $this->transientState['versionLeak']['result'] .=
+                ' The generator tag contains the current version.';
+        }
+
+        if ($readMe) {
+            $this->transientState['versionLeak']['result'] .=
+                ' The readme.html file exists in the root folder.';
+        }
     }
 
 	/**

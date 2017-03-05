@@ -25,6 +25,13 @@ class FolderChecksum
     public $includeFolderInfo = false;
 
     /**
+     * Return information about owner and group?
+     *
+     * @var bool
+     */
+    public $includeOwner = false;
+
+    /**
      * Path to scan
      *
      * @var string
@@ -44,6 +51,23 @@ class FolderChecksum
      * @var array
      */
     private $ignore = array();
+
+    /**
+     * Keeps track of (cached) system user information
+     * as returned from posix_getpwuid
+     *
+     * @var array
+     */
+    private $systemUsers = array();
+
+    /**
+     * Keeps track of (cached) system group information
+     * as returned from posix_getgrgid
+     *
+     * @var array
+     */
+    private $systemGroups = array();
+
 
     /**
      * FolderChecksum constructor.
@@ -68,15 +92,14 @@ class FolderChecksum
 
     public function scan()
     {
-        $fileName = wp_tempnam();
-        $fileHandle = fopen($fileName, 'w');
-
-        $this->recScandir($this->path, $fileHandle, $this->basePath);
-        fclose($fileHandle);
-
-        $output =  $this->flatToJson(file_get_contents($fileName));
-        unlink($fileName);
+        $flat = $this->recIterateDir($this->path, $this->basePath);
+        $output =  $this->flatToJson($flat);
         return $output;
+    }
+
+    public function scanRaw()
+    {
+        return $this->recIterateDir($this->path, $this->basePath);
     }
 
     private function flatToJson($flat)
@@ -89,7 +112,7 @@ class FolderChecksum
                 continue;
             }
 
-            $cols = explode("\t", trim($row));
+            $cols = explode("\t", $row);
             // Skip directories
             if ($cols[4] == '1' || count($cols) == 1) {
                 continue;
@@ -101,6 +124,9 @@ class FolderChecksum
             $obj->hash = $cols[3];
             $obj->mode = $cols[4];
             $obj->isDir = $cols[5];
+            $obj->isLink = $cols[7];
+            $obj->owner = $cols[8];
+            $obj->group = $cols[9];
             $checksums[$cols[0]] = $obj;
         }
 
@@ -109,57 +135,86 @@ class FolderChecksum
         return $out;
     }
 
-    private function recScandir($dir, $f, $base)
+    private function recIterateDir($dir, $base)
     {
-        $dir = rtrim($dir, '/');
-        $root = scandir($dir);
-        foreach ($root as $value) {
-            if ($value === '.' || $value === '..') {
-                continue;
-            }
+        $out = '';
+        $iterator = new \FilesystemIterator(
+            $dir,
+            \FilesystemIterator::CURRENT_AS_PATHNAME | \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS
+        );
+        foreach($iterator AS $file){
+            try {
+                if ($this->fnInArray("$dir/$file", $this->ignore)) {
+                    continue;
+                }
 
-            if ($this->fnInArray("$dir/$value", $this->ignore)) {
-                continue;
-            }
+                if (is_file($file)) {
+                    $out .= $this->fileInfo2String($file, $base) . "\n";
+                    continue;
+                }
 
-            if (is_file("$dir/$value")) {
-                $this->fileInfo2File($f, "$dir/$value", $base);
-                continue;
-            }
+                if ($this->includeFolderInfo) {
+                    $out .= $this->fileInfo2String($file, $base) . "\n";
+                }
 
-            if ($this->includeFolderInfo) {
-                $this->fileInfo2File($f, "$dir/$value", $base);
+                if ($this->recursive) {
+                    $out .= $this->recIterateDir($file, $base);
+                }
             }
-
-            if ($this->recursive) {
-                $this->recScandir("$dir/$value", $f, $base);
-            }
+            catch(Throwable $e){ continue; }
+            catch(Exception $e){ continue; }
         }
+
+        return $out;
     }
 
-    private function fileInfo2File($f, $file, $base)
+    private function fileInfo2String($file, $base)
     {
+        $sum = 0;
+        $owner = '';
+        $group = '';
+        $isDir = is_dir($file);
         $stat = stat($file);
-
-        if ($this->calcHash) {
-            $sum = md5_file($file);
-        } else {
-            $sum = 0;
-        }
 
         $base = rtrim($base, '/') . '/';
         $relfile = substr($file, strlen($base));
+
+        if ($this->calcHash) {
+            if ($stat['size'] < 1024 * 1024 * 1) {
+                $sum = md5_file($file);
+            } else {
+                $i = 0;
+            }
+        }
+
+        if ($this->includeOwner) {
+            $ownerId = $stat['uid'];
+            $groupId = $stat['gid'];
+            if (!isset($this->systemUsers[$ownerId])) {
+                $this->systemUsers[$ownerId] = posix_getpwuid($ownerId);
+            }
+            if (!isset($this->systemGroups[$groupId])) {
+                $this->systemGroups[$groupId] = posix_getgrgid($groupId);
+            }
+
+            $owner = $this->systemUsers[$ownerId] ? $this->systemUsers[$ownerId]['name'] : '';
+            $group = $this->systemGroups[$groupId] ? $this->systemGroups[$groupId]['name'] : '';
+        }
+
         $row =  array(
             $relfile,
             $stat['mtime'],
-            is_dir($file) ? 0 : $stat['size'],
-            is_dir($file) ? 0 : $sum,
+            $isDir ? 0 : $stat['size'],
+            $isDir ? 0 : $sum,
             substr(decoct($stat['mode']), -4),
-            (int) is_dir($file),
+            (int) $isDir,
             (int) is_file($file),
             (int) is_link($file),
+            $owner,
+            $group,
         );
-        fwrite($f, join("\t", $row) . "\n");
+
+        return join("\t", $row);
     }
 
     private function fnInArray($needle, $haystack)

@@ -11,6 +11,8 @@ class ApiClient
     const INVALID_APIKEY = 2;
     const RATE_LIMIT_EXCEEDED = 3;
     const RESOURCE_NOT_FOUND = 4;
+    const INVALID_EMAIL = 5;
+    const EMAIL_IN_USE = 6;
 
     /**
      * @var string
@@ -28,6 +30,9 @@ class ApiClient
     public function __construct()
     {
         $this->baseUrl = 'https://api.wpessentials.io/v1';
+        if (defined('INTEGRITY_CHECKER_URL')) {
+            $this->baseUrl = INTEGRITY_CHECKER_URL;
+        }
         $this->lastError = 0;
     }
 
@@ -58,8 +63,10 @@ class ApiClient
         }
 
         $url = join('/', array($this->baseUrl, 'quota'));
-        $args = array('headers' => array('Authorization' => $apiKey));
+        $args = array('headers' => $this->headers($apiKey));
         $ret = wp_remote_get($url, $args);
+        $this->updateSiteId($ret);
+
         $out = null;
 
         if (is_wp_error($ret)) {
@@ -80,6 +87,74 @@ class ApiClient
     }
 
     /**
+     * Verify that an Apikey is valid
+     *
+     * @param string $apiKey
+     *
+     * @return object|\WP_Error
+     */
+    public function verifyApiKey($apiKey)
+    {
+        $ret = $this->getQuota($apiKey);
+        if ($this->lastError === 0) {
+            update_option('wp_checksum_apikey', $apiKey);
+            $ret->message = __('API key updated', 'integrity-checker');
+            return $ret;
+        } else {
+            return new \WP_Error(
+                400,
+                __('API key verification failed. Key not updated', 'integrity-checker')
+            );
+        }
+    }
+
+    /**
+     * Register email address with backend
+     * (increases quota)
+     *
+     * @param string $email
+     *
+     * @return object|\WP_Error
+     */
+    public function registerEmail($email)
+    {
+        $this->lastError = 0;
+        $apiKey = $this->getApiKey();
+        if (!$apiKey) {
+            $this->lastError = self::NO_APIKEY;
+            return null;
+        }
+
+        $url = join('/', array($this->baseUrl, 'userdata'));
+        $args = array(
+            'headers' => $this->headers($apiKey, array('Content-Type' => 'application/json')),
+            'body' => json_encode(array(
+                'email' => $email,
+                'host' => get_site_url(),
+            )),
+        );
+
+        $args = http_build_query($args);
+        $out = wp_remote_post($url, $args);
+        $this->updateSiteId($out);
+
+        if (is_wp_error($out)) {
+            return $out;
+        }
+
+        switch ($out['response']['code']) {
+            case 401:
+                $this->lastError = self::INVALID_APIKEY;
+                break;
+        }
+
+        $out = json_decode($out['body']);
+
+        return $out;
+
+    }
+
+    /**
      * @param $type
      * @param $slug
      * @param $version
@@ -89,14 +164,16 @@ class ApiClient
     {
         $this->lastError = 0;
         $apiKey = $this->getApiKey();
+
         if (!$apiKey) {
             $this->lastError = self::NO_APIKEY;
             return null;
         }
 
         $url = join('/', array($this->baseUrl, 'checksum', $type, $slug, $version));
-        $args = array('headers' => array('Authorization' => $apiKey));
+        $args = array('headers' => $this->headers($apiKey));
         $out = wp_remote_get($url, $args);
+        $this->updateSiteId($out);
 
         if (is_wp_error($out)) {
             return null;
@@ -127,70 +204,6 @@ class ApiClient
     }
 
     /**
-     * Verify that an Apikey is valid
-     *
-     * @param string $apiKey
-     *
-     * @return object|\WP_Error
-     */
-    public function verifyApiKey($apiKey)
-    {
-        $ret = $this->getQuota($apiKey);
-        if ($this->lastError === 0) {
-            update_option('wp_checksum_apikey', $apiKey);
-            $ret->message = __('API key updated', 'integrity-checker');
-            return $ret;
-        } else {
-            return new \WP_Error(
-                400,
-                __('API key verification failed. Key not updated', 'integrity-checker')
-            );
-        }
-    }
-
-    /**
-     * Verify that an Apikey is valid
-     *
-     * @param string $email
-     *
-     * @return object|\WP_Error
-     */
-    public function registerEmail($email)
-    {
-        $this->lastError = 0;
-        $apiKey = $this->getApiKey();
-        if (!$apiKey) {
-            $this->lastError = self::NO_APIKEY;
-            return null;
-        }
-
-        $url = join('/', array($this->baseUrl, 'userdata'));
-        $args = array(
-            'headers' => array('Authorization' => $apiKey, 'Content-Type' => 'application/json'),
-            'body' => json_encode(array(
-                'email' => $email,
-                'host' => get_site_url(),
-            )),
-        );
-        $out = wp_remote_post($url, $args);
-
-        if (is_wp_error($out)) {
-            return $out;
-        }
-
-        switch ($out['response']['code']) {
-            case 401:
-                $this->lastError = self::INVALID_APIKEY;
-                break;
-        }
-
-        $out = json_decode($out['body']);
-
-        return $out;
-
-    }
-
-    /**
      * Get original source file of a plugin/theme
      *
      * @param string $type
@@ -211,15 +224,42 @@ class ApiClient
 
         $url = join('/', array($this->baseUrl, 'file', $type, $slug, $version));
         $args = array(
-            'headers' => array(
-                'Authorization' => $apiKey,
-                'X-Filename'    => $file,
-            )
+            'headers' => $this->headers($apiKey, array('X-Filename' => $file)),
         );
 
         $out = wp_remote_get($url, $args);
-        return $out;
+        $this->updateSiteId($out);
 
+        return $out;
+    }
+
+    /**
+     * @param $emails
+     *
+     * @return object
+     */
+    public function testAlertEmails($emails)
+    {
+        $this->lastError = 0;
+        $apiKey = $this->getApiKey();
+        if (!$apiKey) {
+            $this->lastError = self::NO_APIKEY;
+            return null;
+        }
+
+        $emails = explode(",", $emails);
+
+        $args = array(
+            'headers' => $this->headers($apiKey, array('Content-Type' => 'application/json')),
+            'body'    => json_encode(array(
+                'email' => $emails,
+            )),
+        );
+
+        $url = join('/', array($this->baseUrl, 'alerts', 'test'));
+        $out = wp_remote_post($url, $args);
+
+        return $out;
     }
 
     /**
@@ -241,13 +281,62 @@ class ApiClient
         // No? Let's see if we can create a key via the API
         $url = join('/', array($this->baseUrl, 'anonymoususer'));
         $out = wp_remote_post($url);
+        $this->updateSiteId($out);
         if ($out['response']['code'] == 200) {
             $ret = json_decode($out['body']);
             $apiKey = base64_encode($ret->user . ':' . $ret->secret);
             update_option('wp_checksum_apikey', $apiKey);
+
             return $apiKey;
         }
 
         return false;
+    }
+
+    /**
+     * Check if the server wants us to set a new siteid
+     *
+     * @param $response
+     */
+    private function updateSiteId($response)
+    {
+        if (is_wp_error($response)) {
+            return;
+        }
+
+        if (!isset($response['http_response'])) {
+            return;
+        }
+        $objHeaders = $response['http_response'];
+        $headers = $objHeaders->get_headers()->getAll();
+        if (isset($headers['x-checksum-site-id'])) {
+            update_option('wp_checksum_siteid', $headers['x-checksum-site-id']);
+        }
+    }
+
+    /**
+     * Prepare standard headers
+     *
+     * @param $apiKey
+     * @param $arr
+     *
+     * @return array
+     */
+    private function headers($apiKey, $arr = array())
+    {
+        $ret = array(
+            'Authorization' => $apiKey,
+            'X-Checksum-Client' => 'integrity-checker; ' . INTEGRITY_CHECKER_VERSION,
+        );
+        $siteId = get_option('wp_checksum_siteid', false);
+        if ($siteId) {
+            $ret['X-Checksum-Site-Id'] = $siteId;
+        }
+
+        foreach ($arr as $key => $value) {
+            $ret[$key] = $value;
+        }
+
+        return $ret;
     }
 }

@@ -61,10 +61,12 @@ class AdminPage {
 
         if (isset($_REQUEST['page']) && $_REQUEST['page'] == $this->key) {
             $this->tabs = array(
+                new OverviewTab($this),
                 new ChecksumScanTab($this),
-                new PermissionsScanTab($this),
-                new SettingsScanTab(),
-                new AboutTab(),
+                new FilesScanTab($this),
+                new SettingsScanTab($this),
+                new SettingsTab($this),
+                new AboutTab($this),
             );
         }
     }
@@ -125,9 +127,24 @@ class AdminPage {
             )
         );
 
+        wp_enqueue_script(
+            'jqCron',
+            plugins_url() . '/' . $plugin->getPluginSlug() . '/js/jqCron.js',
+            array('jquery', $plugin->getPluginSlug() . '-main'),
+            $plugin->getVersion(),
+            true
+        );
+
         wp_enqueue_style(
             $plugin->getPluginSlug() . '-maincss',
             plugins_url() . '/' . $plugin->getPluginSlug() . '/css/style.css',
+            array(),
+            $plugin->getVersion()
+        );
+
+        wp_enqueue_style(
+            'jqCron',
+            plugins_url() . '/' . $plugin->getPluginSlug() . '/css/jqCron.css',
             array(),
             $plugin->getVersion()
         );
@@ -141,6 +158,18 @@ class AdminPage {
         );
 
         wp_enqueue_style('wp-jquery-ui-dialog');
+
+        foreach ($this->tabs as $tab) {
+            foreach ($tab->getScripts() as $script) {
+                wp_enqueue_script(
+                    $plugin->getPluginSlug() . $script['id'],
+                    plugins_url() . '/' . $plugin->getPluginSlug() . $script['file'],
+                    $script['deps'],
+                    $plugin->getVersion(),
+                    true
+                );
+            }
+        }
     }
 
 

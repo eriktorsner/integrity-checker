@@ -8,17 +8,36 @@ namespace integrityChecker;
 class State
 {
     /**
+     * @var string
+     */
+    private $slug;
+
+    /**
+     * State constructor.
+     */
+    public function __construct()
+    {
+        $plugin = integrityChecker::getInstance();
+        $this->slug = $plugin->getPluginSlug();
+    }
+
+    /**
      * @param $testName
      * @return array|mixed|void
      */
     public function getTestState($testName)
     {
-        $procStatus = get_option("integrity-checker_status_$testName", false);
+        $procStatus = get_option("{$this->slug}_status_$testName", false);
         if (!$procStatus) {
             $procStatus = $this->noState();
         }
         $procStatus->startedIso = date('Y-m-d H:i:s', $procStatus->started);
         $procStatus->finishedIso = date('Y-m-d H:i:s', $procStatus->finished);
+
+        if (isset($procStatus->session)) {
+            $bgProcess = new BackgroundProcess($procStatus->session);
+            $procStatus->jobCount = $bgProcess->jobCount();
+        }
 
         return $procStatus;
     }
@@ -31,7 +50,7 @@ class State
      */
     public function updateTestState($testName, $state)
     {
-        update_option("integrity-checker_status_$testName", $state);
+        update_option("{$this->slug}_status_$testName", $state);
     }
 
 	/**
@@ -40,35 +59,20 @@ class State
 	 */
     public function storeTestResult($testName, $result)
     {
-        $current = get_option("integrity-checker_result_$testName", array());
-        $current[] = $result;
-
-        // keep only the 5 last results
-        $result = array_slice($current, -5);
-        update_option("integrity-checker_result_{$testName}", $result);
+        update_option("integrity-checker_result_{$testName}", $result, false);
     }
 
     /**
      * Get test result from WP_Options table
      *
      * @param string $testName
-     * @param bool $escape
      *
      * @return mixed|void
      */
-    public function getTestResult($testName, $escape = false)
+    public function getTestResult($testName)
     {
-        $allResults = get_option("integrity-checker_result_$testName", array());
-	    usort($allResults, function($a, $b) {
-		   return $a['ts'] - $b['ts'];
-	    });
-	    $ret = end($allResults);
-
-	    if ($escape) {
-		    $this->escapeObjectStrings($ret);
-	    }
-
-        return $ret;
+        $result = get_option("{$this->slug}_result_$testName", false);
+        return $result;
     }
 
     /**
@@ -81,27 +85,6 @@ class State
             'started' => null,
             'finished' => null,
         );
-    }
-
-	/**
-	 * Walk through the object and ensure all strings are escaped
-	 *
-	 * @param $obj
-	 */
-    private function escapeObjectStrings(&$obj)
-    {
-	    if (!$obj) {
-		    return;
-	    }
-		foreach ($obj as $key => &$item) {
-			if (is_string($item)) {
-				$item = esc_html($item);
-			}
-
-			if (is_object($item) || is_array($item)) {
-				$this->escapeObjectStrings($item);
-			}
-		}
     }
 
 }

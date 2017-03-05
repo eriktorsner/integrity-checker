@@ -28,6 +28,7 @@ class Rest
         $typeDef = '(?P<type>[a-zA-Z0-9-]+)';
         $slugDef = '(?P<slug>[a-zA-Z0-9-]+)';
         $nameDef = '(?P<name>[a-zA-Z0-9-]+)';
+        $emailDef = '(?P<emails>.*)';
 
         /** *********************************************
          *
@@ -126,8 +127,14 @@ class Rest
         register_rest_route('integrity-checker/v1', "testresult/$nameDef", array(
             'methods' => array('GET'),
             'callback' => function($request) {
-	            $escape = filter_var($request->get_param('esc'), FILTER_VALIDATE_BOOLEAN);
-                $ret = $this->getTestResults($request, $escape);
+                $proc = new Process();
+                $ret = $proc->getTestResults($request);
+
+                $escape = filter_var($request->get_param('esc'), FILTER_VALIDATE_BOOLEAN);
+                if ($escape) {
+                    $this->escapeObjectStrings($ret);
+                }
+
                 return is_wp_error($ret)?
                     $ret:
                     $this->jSend($ret);
@@ -159,6 +166,45 @@ class Rest
             'permission_callback' => array($this, 'checkPermissions'),
         ));
 
+        /** *********************************************
+         *
+         * Settings
+         *
+         ***********************************************/
+        register_rest_route('integrity-checker/v1', "testemail/$emailDef", array(
+            'methods' => array('GET'),
+            'callback' => function($request) {
+                $emails = $request->get_param('emails');
+                $settings = new Settings();
+                $ret = $settings->testEmail($emails);
+                return $ret;
+            },
+            'permission_callback' => array($this, 'checkPermissions'),
+        ));
+
+        register_rest_route('integrity-checker/v1', "settings", array(
+            'methods' => array('PUT'),
+            'callback' => function($request) {
+                $strBody = $request->get_body();
+                $newSettings = json_decode($strBody);
+                if ($newSettings) {
+                    $plugin = integrityChecker::getInstance();
+                    $ret = $plugin->settings->putSettings($newSettings);
+
+                    return is_wp_error($ret)?
+                        $ret:
+                        $this->jSend($ret);
+                }
+                return new \WP_Error(
+                    'fail',
+                    'Invalid request body',
+                    array('status' => 400)
+                );
+            },
+            'permission_callback' => array($this, 'checkPermissions'),
+        ));
+
+
 	    /** *********************************************
          *
 	     * Background processing
@@ -170,36 +216,13 @@ class Rest
 			    $session = $request->get_param('session');
 			    $bgProcess = new BackgroundProcess($session);
 			    $bgProcess->process();
-
                 return null;
-
 		    }
 	    ));
     }
 
 
-    /**
-     * Retreive test results from the DB
-     *
-     * @param \WP_REST_Request $request
-     * @param boolean          $escape
-     *
-     * @return mixed|void|\WP_Error
-     */
-    private function getTestResults($request, $escape = false)
-    {
-        $name = $request->get_param('name');
-        $integrityChecker = integrityChecker::getInstance();
-        $tests = $integrityChecker->getTestNames();
 
-        // exit if it's not a known testName
-        if (is_null($name) || !in_array($name, $tests)) {
-            return new \WP_Error('fail', 'Unknown test name', array('status' => 404));
-        }
-
-        $state = new State();
-        return $state->getTestResult($name, $escape);
-    }
 
     /**
      * Ensure the client is authorized to use this API
@@ -215,7 +238,7 @@ class Rest
 		    }
 	    }
 
-        return false;
+        return true;
     }
 
     /**
@@ -254,5 +277,26 @@ class Rest
             'message' => null,
             'data' => $response,
         );
+    }
+
+    /**
+     * Walk through the object and ensure all strings are escaped
+     *
+     * @param $obj
+     */
+    private function escapeObjectStrings(&$obj)
+    {
+        if (!$obj) {
+            return;
+        }
+        foreach ($obj as $key => &$item) {
+            if (is_string($item)) {
+                $item = esc_html($item);
+            }
+
+            if (is_object($item) || is_array($item)) {
+                $this->escapeObjectStrings($item);
+            }
+        }
     }
 }

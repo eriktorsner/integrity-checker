@@ -5,7 +5,7 @@ namespace integrityChecker\Admin;
  * Class PermissionsScanTab
  * @package integrityChecker\Admin
  */
-class PermissionsScanTab extends BaseTab
+class FilesScanTab extends BaseTab
 {
     /**
      * PermissionsScanTab constructor.
@@ -13,8 +13,8 @@ class PermissionsScanTab extends BaseTab
      */
     public function __construct()
     {
-        $this->tabId = 'permissionscan';
-        $this->name = __('Permissions','integrity-checker');
+        $this->tabId = 'files';
+        $this->name = __('Files','integrity-checker');
     }
 
     /**
@@ -22,6 +22,6 @@ class PermissionsScanTab extends BaseTab
      */
     public function render()
     {
-        include __DIR__ . '/views/PermissionsScanResults.php';
+        include __DIR__ . '/views/FilesScanResults.php';
     }
 }

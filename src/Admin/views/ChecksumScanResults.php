@@ -6,6 +6,8 @@
     <# if (data.state == 'finished') {#>
         <p>
             <strong><?php _e('Last scan finished', 'integrity-checker');?></strong>: {{{data.finishedIso}}}
+            <?php _e('and took', 'integrity-checker');?>
+            <strong>{{{data.finished - data.started}}} <?php _e('seconds', 'integrity-checker');?></strong>
         </p>
     <# } #>
 
@@ -18,6 +20,12 @@
     <# if (data.state != 'started') {#>
         <a class="button-primary startScan" data-scantype="checksum"><?php _e('Scan now', 'integrity-checker' ) ?></a>
     <# } #>
+
+    <div class="scanStatus <?php echo $scanType;?>" style="display: none;">
+        <span class="jobCount"></span>
+        <?php _e("plugins to go", "integrity-checker");?>
+    </div>
+
     <p>
         <?php _e('This tool detects changes in individual files in WordPress core, themes and plugins.', 'integrity-checker');?>
     </p>
@@ -29,8 +37,8 @@
         <p>
             <?php _e('If issues are found, consider reinstalling the problematic theme, plugin or WordPress itself', 'integrity-checker');?>
         </p>
-</script>
 
+</script>
 <script type="text/html" id="tmpl-checksumIssuesTmpl">
     <div class="scan-results-item">
         <# if (data.totalIssues > 0) { #>

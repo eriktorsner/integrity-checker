@@ -4,6 +4,8 @@ namespace integrityChecker\Tests;
 require_once __DIR__ . '/Checksum/FolderChecksum.php';
 
 use integrityChecker\BackgroundProcess;
+use integrityChecker\integrityChecker;
+use integrityChecker\State;
 use WPChecksum\FolderChecksum;
 
 /**
@@ -29,13 +31,42 @@ class Permissions extends BaseTest
      */
     private $acceptablePermissions;
 
+    /**
+     * @var string
+     */
+    private $slug;
+
+    /**
+     * @var string
+     */
+    private $tableName;
+
+    /**
+     * Issue type, to keep track of result of analyzed files
+     */
+    const UNACCEPTABLE_MASK = 1;
+
+    /**
+     * Issue type, to keep track of result of analyzed files
+     */
+    const UNACCEPTABME_OWNER = 2;
+
+    /**
+     * Issue type, to keep track of result of analyzed files
+     */
+    const UNACCEPTABME_GROUP = 2;
+
+
+
 	/**
 	 * Permissions constructor.
 	 *
 	 * @param null $session
 	 */
-	public function __construct( $session ) {
-		parent::__construct( $session );
+	public function __construct($session) {
+        global $wpdb;
+
+		parent::__construct($session);
 
 		$this->acceptablePermissions = array(
 			'file' => array('0644','0640','0600'),
@@ -46,131 +77,230 @@ class Permissions extends BaseTest
 			'wp-content/cache',
 			'wp-config.php',
 		);
+
+        $plugin = integrityChecker::getInstance();
+        $this->slug = str_replace('-', '_', $plugin->getPluginSlug());
+        $this->tableName = $wpdb->prefix . $this->slug . '_files';
 	}
 
 	/**
+     * Start the process
+     *
 	 * @param $request
 	 */
 	public function start($request)
     {
-	    $bgProcess = new BackgroundProcess();
-	    $this->session = $bgProcess->session;
-
-        parent::start($request);
-
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'scan'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'shapeResult'), 20);
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'finish'), 99);
-
-	    $bgProcess->process();
-    }
-
-	/**
-	 * Main scan function. Will create jobs/tasks for each important sub folder
-	 *
-	 * @param $job
-	 */
-	public function scan($job)
-	{
-		$bgProcess = new BackgroundProcess($this->session);
-		$bgProcess->addJob((object)array(
-			'class' => __CLASS__,
-			'method' => 'scanFolder',
-			'parameters' => array('folder' => ABSPATH, 'recursive' => false),
-		));
-
-		$bgProcess->addJob((object)array(
-			'class' => __CLASS__,
-			'method' => 'scanFolder',
-			'parameters' => array('folder' => ABSPATH . 'wp-admin', 'recursive' => true),
-		));
-
-		$bgProcess->addJob((object)array(
-			'class' => __CLASS__,
-			'method' => 'scanFolder',
-			'parameters' => array('folder' => ABSPATH . 'wp-includes', 'recursive' => true),
-		));
-
-
-		// There's potentially 100s of subfolders under wp-content, too many
-		// to safely scan in one go on weaker servers. We need to divide the work
-		$wpContentSubfolders = $this->rglob(ABSPATH . 'wp-content/', '*', GLOB_ONLYDIR);
-		$newJobs = array();
-		foreach ($wpContentSubfolders as $folder) {
-			$newJobs[] = (object)array(
-				'class' => __CLASS__,
-				'method' => 'scanFolder',
-				'parameters' => array('folder' => $folder, 'recursive' => false),
-			);
-		}
-		$bgProcess->addJobs($newJobs);
-	}
-
-	/**
-	 * Scan an individual folder
-	 *
-	 * @param $job
-	 */
-	public function scanFolder($job)
-	{
-		require_once ABSPATH.'/wp-admin/includes/file.php';
-
-		$folder = $job->parameters['folder'];
-		$recursive = $job->parameters['recursive'];
-
-		$checkSummer = new FolderChecksum($folder, ABSPATH);
-		$checkSummer->calcHash = false;
-		$checkSummer->includeFolderInfo = true;
-		$checkSummer->recursive = $recursive;
-		$content = $checkSummer->scan();
-
-		$this->transientState = array_merge($this->transientState, $content->checksums);
-	}
-
-
-    public function shapeResult($job)
-    {
-        $files = array();
-        $total = 0;
-        $acceptableCount = 0;
-
-        foreach ($this->transientState as $fileName => $file) {
-            $total++;
-            $file->file = $fileName;
-            $acceptable = in_array(
-                $file->mode,
-                $this->acceptablePermissions[$file->isDir ? 'folder' : 'file']
-            );
-
-            if (isset($file->date)) {
-                $file->date = date('Y-m-d H:i:s', $file->date);
-            } else {
-                $file->date = '';
-            }
-
-            if (!$acceptable) {
-                $files[] = $file;
-            } else {
-	            $acceptableCount++;
-            }
+        $limit = 900;
+        $payload = json_decode($request->get_body());
+        if (isset($payload->source) && $payload->source == 'manual') {
+            $limit = 90;
         }
 
-	    usort($files, function($a, $b) {
-		    $cntA = substr_count($a->file, DIRECTORY_SEPARATOR);
-		    $cntB = substr_count($b->file, DIRECTORY_SEPARATOR);
+        $bgProcess = $this->getBackgroundProcess(new ScanAll(null), $request, $limit);
+        $this->session = $bgProcess->session;
 
-		    $aa = (($a->isDir || $cntA > 0) ? '1':'0') . $a->file;
-		    $bb = (($b->isDir || $cntB > 0) ? '1':'0') . $b->file;
+        parent::start($request);
+        $this->transientState = '';
+        $offset = $bgProcess->lastQueuePriority();
 
-		    return strcasecmp($aa, $bb);
-	    });
+	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'analyze'), $offset + 20);
+	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'finish'), $offset + 99);
 
-	    $this->transientState = array( 'result' => array(
+	    $bgProcess->process(true);
+    }
+
+    /**
+     * Analyze all files
+     *
+     * @param $job
+     */
+    public function analyze($job)
+    {
+        global $wpdb;
+        $files = array();
+        $total = 0;
+        $unAcceptableCount = 0;
+
+        $acceptableOwnerGroup = $this->getOwnerGroup();
+        $acceptableMasks = $this->getAcceptableMasks();
+
+        // nr of files to fetch in one go
+        $chunk = 2000;
+        $offset = 0;
+        $done = false;
+
+        while (!$done) {
+            $done = true; // Assume this is the last run
+            $sql = "select * from {$this->tableName} WHERE checkpoint=0 LIMIT $offset, $chunk";
+            $rows = $wpdb->get_results($sql);
+            $updates = array();
+
+            foreach ($rows as $row) {
+                $done = false; // found at least one row, main loop isn't done yet
+                $total++;
+                $issue = $this->analyzeFile($row, $acceptableOwnerGroup, $acceptableMasks);
+
+                if (!is_array($updates[$issue])) {
+                    $updates[$issue] = array();
+                }
+                $updates[$issue][] = $row->id;
+
+                if ($issue > 0) {
+                    $unAcceptableCount++;
+                }
+            }
+
+            foreach ($updates as $issue => $ids) {
+                $joined = join(',', $ids);
+                $query = "update {$this->tableName} SET permissionsresult={$issue} " .
+                          "WHERE id in($joined)";
+                $wpdb->query($query);
+            }
+
+            $offset += $chunk;
+        }
+
+
+	    $this->transientState = array('result' => array(
 		    'total' => $total,
-		    'acceptable' => $acceptableCount,
-		    'unacceptable' => (int)($total - $acceptable),
-		    'files' => $files,
+		    'acceptable' => $total - $unAcceptableCount,
+		    'unacceptable' => $unAcceptableCount,
 	    ));
+    }
+
+    /**
+     * Analyze individual file
+     *
+     * @param object $row
+     * @param object $acceptableOwnerGroup
+     * @param object $acceptableMasks
+     *
+     * @return bool|object
+     */
+    private function analyzeFile($row, $acceptableOwnerGroup, $acceptableMasks)
+    {
+
+        $permissionsOk = in_array(
+            '0' . $row->mask,
+            $row->isdir ? $acceptableMasks->folderMask : $acceptableMasks->fileMask
+        );
+        $ownerOk = in_array($row->fileowner, $acceptableOwnerGroup->owner);
+        $groupOk = in_array($row->filegroup, $acceptableOwnerGroup->group);
+
+        $issue = 0;
+        if (!$permissionsOk) {
+            $issue = $issue | self::UNACCEPTABLE_MASK;
+        }
+
+        if (!$ownerOk) {
+            $issue = $issue | self::UNACCEPTABME_OWNER;
+        }
+
+        if (!$groupOk) {
+            $issue = $issue | self::UNACCEPTABME_GROUP;
+        }
+
+        return $issue;
+
+    }
+
+    /**
+     * Add test data from the database
+     *
+     * @param object $result
+     * @return object
+     */
+    public function getRestResults($result)
+    {
+        $result['files'] = array();
+        return $result;
+
+        return (object)array(
+            'file'   => $row->name,
+            'type'   => $row->isdir ? 'Folder' : 'File',
+            'isDir'  => $row->isdir,
+            'mode'   => '0' . $row->mask,
+            'owner'  => $row->fileowner,
+            'group'  => $row->filegroup,
+            'date'   => date('Y-m-d H:i:s', $row->modified),
+            'size'   => $row->size,
+            'reason' => join(' ', $reason),
+        );
+
+        $reason = array();
+        $reason[] = $permissionsOk ? null : __('Unacceptable permission mask.', 'integrity-checker');
+        $reason[] = $ownerOk ? null : __('Unacceptable file owner.', 'integrity-checker');
+        $reason[] = $groupOk ? null : __('Unacceptable file group.', 'integrity-checker');
+
+        usort($files, function($a, $b) {
+            $cntA = substr_count($a->file, DIRECTORY_SEPARATOR);
+            $cntB = substr_count($b->file, DIRECTORY_SEPARATOR);
+
+            $aa = (($a->isDir || $cntA > 0) ? '1':'0') . $a->file;
+            $bb = (($b->isDir || $cntB > 0) ? '1':'0') . $b->file;
+
+            return strcasecmp($aa, $bb);
+        });
+
+        return $result;
+    }
+
+
+    /**
+     * Get the intended owner/group from options or figure out the
+     * most probable owner and group for this installation using
+     * heuristics
+     *
+     * @return object stdClass with a owner and group memeber
+     */
+    private function getOwnerGroup()
+    {
+        global $wpdb;
+
+        $ret = (object)array(
+            'owner' => get_option($this->slug . '_file_owner', false),
+            'group' => get_option($this->slug . '_file_group', false),
+        );
+
+        // if we have both via options
+        if ($ret->owner && $ret->group) {
+            return $ret;
+        }
+
+        $files = array('index.php', 'wp-settings.php', 'wp-blog-header.php');
+        if (!$ret->owner) {
+            $sql = "SELECT fileowner FROM {$this->tableName} \n" .
+                   "WHERE name in('" . join("','", $files) . "')\n" .
+                   "GROUP BY fileowner ORDER BY count(fileowner) DESC LIMIT 0,1";
+            $ret->owner = $wpdb->get_col($sql);
+        }
+
+        if (!$ret->group) {
+            $sql = "SELECT filegroup FROM {$this->tableName} \n" .
+                   "WHERE name in('" . join("','", $files) . "')\n" .
+                   "GROUP BY filegroup ORDER BY count(filegroup) DESC LIMIT 0,1";
+            $ret->group = $wpdb->get_col($sql);
+        }
+
+        return $ret;
+    }
+
+    /**
+     * Find acceptable permission masks from the options
+     * or if not set, the default WordPress permissions
+     *
+     * @return object
+     */
+    private function getAcceptableMasks()
+    {
+        global $wpdb;
+
+        $ret = (object)array(
+            'fileMask' => get_option($this->slug . '_file_masks', array('0644','0640','0600')),
+            'folderMask' => get_option($this->slug . '_folder_masks', array('0755','0750','0700')),
+        );
+
+        return $ret;
     }
 
 }

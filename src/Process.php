@@ -79,18 +79,56 @@ class Process
     }
 
     /**
+     * Get the latest result of a test
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return mixed|void|\WP_Error
+     */
+    public function getTestResults($request)
+    {
+        $name = $request->get_param('name');
+        $integrityChecker = integrityChecker::getInstance();
+        $tests = $integrityChecker->getTestNames();
+
+        // exit if it's not a known testName
+        if (is_null($name) || !in_array($name, $tests)) {
+            return new \WP_Error('fail', 'Unknown test name', array('status' => 404));
+        }
+
+        // Get the test result from options
+        $state = new State();
+        $result = $state->getTestResult($name);
+
+        // The test class might want to add details
+        $objTest = $this->testFactory($name);
+
+        return $objTest->getRestResults($result);
+
+    }
+
+    /**
      * @param $testName
      *
      * @return Tests\BaseTest
      */
-    private function testFactory($testName)
+    public function testFactory($testName)
     {
         switch ($testName) {
+            case 'scanall':
+                return Tests\ScanAll::getInstance();
+                break;
             case 'checksum':
                 return Tests\Checksum::getInstance();
                 break;
             case 'permissions':
                 return Tests\Permissions::getInstance();
+                break;
+            case 'modifiedfiles':
+                return Tests\ModifiedFiles::getInstance();
+                break;
+            case 'modifiedfiles':
+                return Tests\ModifiedFiles::getInstance();
                 break;
             case 'settings':
                 return Tests\Settings::getInstance();

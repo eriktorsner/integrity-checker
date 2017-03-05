@@ -5,7 +5,7 @@ namespace integrityChecker\Admin;
  * Class GeneralOptions
  * @package integrityChecker\Admin
  */
-class OverviewTab extends BaseTab
+class SettingsTab extends BaseTab
 {
     /**
      * ChecksumScanTab constructor.
@@ -13,22 +13,8 @@ class OverviewTab extends BaseTab
      */
     public function __construct()
     {
-        $this->tabId = 'generaloptions';
-        $this->name = __('Overview','integrity-checker');
-    }
-
-    /**
-     * @return array
-     */
-    public function getScripts()
-    {
-        return array(
-            array(
-                'id' => $this->tabId,
-                'file' => '/js/adminOverview.js',
-                'deps' => array()
-            ),
-        );
+        $this->tabId = 'settings';
+        $this->name = __('Settings','integrity-checker');
     }
 
     /**
@@ -36,6 +22,17 @@ class OverviewTab extends BaseTab
      */
     public function render()
     {
-        include __DIR__ . '/views/Overview.php';
+        include __DIR__ . '/views/Settings.php';
+    }
+
+    public function getScripts()
+    {
+        return array(
+            array(
+                'id' => $this->tabId,
+                'file' => '/js/adminSettings.js',
+                'deps' => array()
+            ),
+        );
     }
 }

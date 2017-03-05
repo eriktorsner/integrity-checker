@@ -28,6 +28,8 @@ class Checksum extends BaseTest
 
 	    parent::start($request);
 
+        $this->transientState = array();
+
 	    // Get the jobs into the queue
 	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkCore'));
 	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkPlugins'));
@@ -129,9 +131,9 @@ class Checksum extends BaseTest
         // ensure the plugins file is loaded from core
         require_once ABSPATH.'/wp-admin/includes/plugin.php';
 
-        $plugins                         = get_plugins();
+        $plugins = get_plugins();
 	    $this->transientState['plugins'] = array();
-	    $bgProcess                       = new BackgroundProcess($this->session);
+	    $bgProcess = new BackgroundProcess($this->session);
 
         foreach ($plugins as $id => $plugin) {
 	        $bgProcess->addJob((object)array(

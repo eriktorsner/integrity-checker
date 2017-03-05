@@ -7,10 +7,16 @@ class AdminUIHooks
     public function register()
     {
         global $pagenow;
+
+        $plugin = integrityChecker::getInstance();
+
         add_action('load-plugins.php', array($this, 'loadPlugins'));
+        add_filter('plugin_action_links_' . $plugin->getPluginBaseName(), array($this, 'pluginActionLinks'), 10, 1);
         if ($pagenow == 'update.php') {
             add_filter('site_transient_update_plugins', array($this, 'modifyPluginsTransient'), 99, 2);
         }
+
+
     }
 
     /**
@@ -55,12 +61,24 @@ class AdminUIHooks
         $current = get_site_transient( 'update_plugins' );
         $response = $current->checked[$pluginFile];
 
-
         $pluginName   = wp_kses($pluginData['Name'], $pluginsAllowedtags);
         $slug = $pluginData['slug'];
         $upgradeUrl = wp_nonce_url(self_admin_url('update.php?action=upgrade-plugin&plugin=') .
                                    $pluginFile, 'upgrade-plugin_' . $pluginFile);
         include __DIR__ . '/Admin/views/PluginUpdateAlert.php';
+    }
+
+    public function pluginActionLinks($links)
+    {
+        $plugin = integrityChecker::getInstance();
+        $url = admin_url('tools.php?page=' . $plugin->getPluginSlug(). '_options');
+
+        return array_merge(
+            $links,
+            array(
+                '<a href="' . $url . '">Settings</a>'
+            )
+        );
     }
 
     public function modifyPluginsTransient($value, $transient)

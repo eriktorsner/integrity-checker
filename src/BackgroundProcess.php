@@ -46,7 +46,7 @@ class BackgroundProcess
 	 *
 	 * @var string
 	 */
-	protected $cronIntervalIdentifier;
+	public $cronIntervalIdentifier;
 
 
 	/**
@@ -71,11 +71,11 @@ class BackgroundProcess
 		}
 
 		if (isset($settings['memoryLimit'])) {
-			$this->timeLimit = $settings['memoryLimit'];
+			$this->memoryLimit = $settings['memoryLimit'];
 		}
 
 		if (isset($settings['prefix'])) {
-			$this->timeLimit = $settings['prefix'];
+			$this->prefix = $settings['prefix'];
 		}
 
 	}
@@ -89,42 +89,49 @@ class BackgroundProcess
 		add_filter('cron_schedules', array($this, 'scheduleCronHealthCheck'));
 	}
 
-	/**
-	 *
-	 */
-	public function process()
+
+    /**
+     * Process the next jobs in queue and fire next
+     * REST call if needed
+     *
+     * @param bool $yield Don't process any queued jobs, just fire next REST call
+     *
+     */
+	public function process($yield = false)
 	{
 		if ($this->isRunning()) {
 			return;
 		}
 
-		$lockTransientName = $this->transientName('lock');
-		set_transient($lockTransientName, time());
+        $queueTransientName = $this->transientName('queue');
+        $jobs = $this->getQueue($queueTransientName);
+		if (!$yield) {
+            $lockTransientName = $this->transientName('lock');
+            set_transient($lockTransientName, time());
 
-		// Make sure there's a cron job scheduled to check
-		// the overall health every 5 minutes
-		$this->ensureScheduled();
-		$queueTransientName = $this->transientName('queue');
+            // Make sure there's a cron job scheduled to check
+            // the overall health every 5 minutes
+            $this->ensureScheduled();
 
-		$this->startTime = time();
-		$obj = null;
+            $this->startTime = time();
+            $obj             = null;
 
-		$jobs = $this->getQueue($queueTransientName);
-		$done = (count($jobs) == 0 || $this->timeExceeded() || $this->memoryExceeded());
-		while (!$done) {
+            $done = (count($jobs) == 0 || $this->timeExceeded() || $this->memoryExceeded());
+            while ( ! $done) {
 
-			$job = array_shift($jobs);
-			set_transient($queueTransientName, $jobs);
+                $job = array_shift($jobs);
+                set_transient($queueTransientName, $jobs);
 
-			$obj = $this->dispatch($job);
+                $obj = $this->dispatch($job);
 
-			$jobs = $this->getQueue($queueTransientName);
+                $jobs = $this->getQueue($queueTransientName);
 
-			// check for empty queue, time or memory constraints
-			$done = (count($jobs) == 0 || $this->timeExceeded() || $this->memoryExceeded());
-		}
+                // check for empty queue, time or memory constraints
+                $done = (count($jobs) == 0 || $this->timeExceeded() || $this->memoryExceeded());
+            }
 
-		$this->doneRunning($obj);
+            $this->doneRunning($obj);
+        }
 
 		if (count($jobs) > 0) {
 			$this->newRequest();
@@ -336,6 +343,36 @@ class BackgroundProcess
 			$this->clearScheduledEvents();
 		}
 	}
+
+    /**
+     * Get the priority of the last queued item
+     *
+     * @return int
+     */
+	public function lastQueuePriority()
+    {
+        $queueTransientName = $this->transientName('queue');
+        $jobs = $this->getQueue($queueTransientName);
+        $lastJob = end($jobs);
+        if ($lastJob) {
+            return $lastJob->priority;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Get the length of the current queue
+     *
+     * @return int
+     */
+    public function jobCount()
+    {
+        $queueTransientName = $this->transientName('queue');
+        $jobs = $this->getQueue($queueTransientName);
+
+        return count($jobs);
+    }
 
 	/**
 	 * Make sure that there's a scheduled cron event that takes

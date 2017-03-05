@@ -33,11 +33,29 @@ class BaseTab
     }
 
     /**
-     * Renter the content of the tab
+     * Render the content of the tab
      * (You're supposed to override this)
      */
     public function render()
     {
+    }
+
+    /**
+     * Return an array of scripts that needs to be
+     * enqueued for this tab
+     */
+    public function getScripts()
+    {
+       return array();
+    }
+
+    /**
+     * Return an array of styles that needs to be
+     * enqueued for this tab
+     */
+    public function getStyles()
+    {
+        return array();
     }
 
     /**

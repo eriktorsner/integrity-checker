@@ -2,6 +2,7 @@
 namespace integrityChecker\Tests;
 
 use integrityChecker\ApiClient;
+use integrityChecker\BackgroundProcess;
 use integrityChecker\State;
 
 class BaseTest
@@ -37,9 +38,9 @@ class BaseTest
     public $result = null;
 
 	/**
-	 * @var array
+	 * @var mixed
 	 */
-	public $transientState = array();
+	public $transientState;
 
     /**
      * Instance of the wpessentials.io client
@@ -48,11 +49,34 @@ class BaseTest
      */
     protected $apiClient;
 
+    /**
+     * Source name, if this test was started by a specific
+     * source (scheduler)
+     *
+     * @var string
+     */
+    private $source;
+
+    /**
+     * Id of the source instance
+     *
+     * @var string
+     */
+    private $sourceInstance;
+
 	/**
 	 * @var string
 	 */
 	protected $session = null;
 
+    /**
+     * Singleton, ensure we have at most one instance of
+     * each test type
+     *
+     * @param null $session
+     *
+     * @return mixed
+     */
 	static public function getInstance($session = null)
 	{
 		$class = get_called_class();
@@ -63,13 +87,18 @@ class BaseTest
 	}
 
 
+    /**
+     * BaseTest constructor.
+     *
+     * @param null $session
+     */
 	public function __construct($session = null)
 	{
 		if ($session) {
 			$this->session = $session;
 			$this->transientState = get_transient( 'tt_teststate_' . $this->session);
 			if (!$this->transientState) {
-				$this->transientState = array();
+				$this->transientState = null;
 			}
 
 			$objState = new State();
@@ -80,6 +109,9 @@ class BaseTest
 		$this->apiClient = new ApiClient();
 	}
 
+    /**
+     * Store temporary state
+     */
 	public function serializeState()
 	{
 		if ($this->transientState) {
@@ -87,15 +119,38 @@ class BaseTest
 		}
 	}
 
+    /**
+     * Called when test results are requested via REST
+     *
+     * @param object $result
+     *
+     * @return object
+     */
+    public function getRestResults($result)
+    {
+        return $result;
+    }
 
+    /**
+     * Start a new test
+     *
+     * @param $request
+     */
     public function start($request)
     {
         $this->started = time();
         $this->stateString = 'started';
+        $payload = json_decode($request->get_body());
+        $this->source = isset($payload->source) ? $payload->source : null;
+        $this->sourceInstance = isset($payload->sourceInstance) ? $payload->sourceInstance: null;
+
         $state = new State();
         $state->updateTestState($this->name, $this->state());
     }
 
+    /**
+     * Store results and clean up after test
+     */
     public function finish()
     {
         $this->finished = time();
@@ -115,6 +170,8 @@ class BaseTest
         delete_transient('tt_teststate_' . $this->session);
 	    delete_transient('tt_teststarted_' . $this->session);
 
+        do_action('integrity_checker_test_finished', $this->name, $this->state());
+
     }
 
 	/**
@@ -128,10 +185,14 @@ class BaseTest
             'state' => $this->stateString,
             'started' => $this->started,
             'finished' => $this->finished,
+            'source' => $this->source,
+            'sourceInstance' => $this->sourceInstance,
         );
 
 	    if ($ret->finished === 0) {
-		    $ret->session = $this->session;
+            $ret->session = $this->session;
+            $bgProcess = new BackgroundProcess($this->session);
+            $ret->jobCount = $bgProcess->jobCount();
 	    }
 
 	    return $ret;
@@ -164,5 +225,30 @@ class BaseTest
 		    $admin = reset($adminUsers);
 		    wp_set_current_user($admin->data->ID, $admin->data->user_login);
 	    }
+    }
+
+    /**
+     * @param $dependency
+     * @param $limit
+     *
+     * @return BackgroundProcess
+     */
+    protected function getBackgroundProcess($dependency, $request, $limit)
+    {
+        $objState = new State();
+        $state = $objState->getTestState($dependency->name);
+
+        if ($state->state == 'finished' && time() < $state->finished + $limit) {
+            return new BackgroundProcess();
+        }
+
+        if ($state->state == 'started' && time() < $state->started + $limit) {
+            return new BackgroundProcess($state->session);
+        }
+
+        // Else start the dependant test
+        $dependency->start($request);
+        return new BackgroundProcess($dependency->session);
+
     }
 }

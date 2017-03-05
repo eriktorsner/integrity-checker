@@ -17,6 +17,17 @@ class AboutTab extends BaseTab
         $this->name = __('About','integrity-checker');
     }
 
+    public function getScripts()
+    {
+        return array(
+            array(
+                'id' => $this->tabId,
+                'file' => '/js/adminAbout.js',
+                'deps' => array()
+            ),
+        );
+    }
+
     public function render()
     {
         include __DIR__ . '/views/About.php';
