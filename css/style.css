@@ -6,6 +6,11 @@ body.tools_page_integrity-checker_options a.submitEmailBtn {
     text-align: center;
 }
 
+body.tools_page_integrity-checker_options .scanStatus {
+    display: inline;
+    margin-left: 5px;
+}
+
 body.tools_page_integrity-checker_options table.scan-result {
     width: 100%;
 }
@@ -92,4 +97,19 @@ table.diff .diff-addedline {
 
 div.card {
     max-width: 100%;
+}
+
+div.box {
+    max-width: 100%;
+}
+
+div.box-half {
+    float: left;
+    width: 50%;
+}
+
+@media (max-width: 800px) {
+    div.box-half {
+        width: 100%;
+    }
 }
