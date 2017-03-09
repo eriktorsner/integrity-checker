@@ -25,30 +25,28 @@ class Settings extends BaseTest
 	 */
     public function start($request)
     {
-	    $bgProcess = new BackgroundProcess();
-	    $this->session = $bgProcess->session;
-
-	    parent::start($request);
+        $this->backgroundProcess->init();
+        parent::start($request);
         $this->transientState = array();
 
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'allowFileEdit'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'dbCredentials'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'sslLogins'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkUpdates'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'directoryIndex'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkSalts'));
+	    $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'allowFileEdit'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'dbCredentials'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'sslLogins'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'checkUpdates'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'directoryIndex'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'checkSalts'));
 
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'userEnumeration'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'userEnumeration'));
 	    //$bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'weakWPCredentials'));
 
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'versionLeak'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkTablePrefix'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'adminUsername'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'versionLeak'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'checkTablePrefix'));
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'adminUsername'));
 
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'shapeResult'), 20);
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'finish'), 99);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'shapeResult'), 20);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'finish'), 99);
 
-	    $bgProcess->process();
+        $this->backgroundProcess->process();
     }
 
 	/**
@@ -104,7 +102,7 @@ class Settings extends BaseTest
 	    $result = array();
 	    foreach ($salts as $salt) {
 		    $exists = defined($salt);
-		    $entropy = $this->entropy(constant($salt));
+		    $entropy = $exists ? $this->entropy(constant($salt)) : 0;
 		    if (!$exists) {
 			    $result[] = $salt . __(" isn't defined", 'integrity-checker');
 		    } elseif ($entropy < 4.2) {
