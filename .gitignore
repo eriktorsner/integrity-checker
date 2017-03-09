@@ -1,3 +1,4 @@
 vendor/
 build/
 svnrepo/
+tests/fixtures/var
