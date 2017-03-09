@@ -28,6 +28,9 @@ Lastly, Integrity-checker will look through some of the basic WordPress configur
 
 [php-diff](https://github.com/chrisboulton/php-diff) copyright Chris Boulton under the [BSD license](https://opensource.org/licenses/BSD-3-Clause). php-diff is slightly adopted to use the Integrity Checker namespace to avoid potential conflicts.
 
+[silexphp/Pimple](https://github.com/silexphp/Pimple/) copyright Fabien Potencier, see [license](https://github.com/silexphp/Pimple/blob/v3.0.2/LICENSE). Pimple is slightly adopted to use the Integrity Checker namespace to avoid potential conflicts.
+
+
 == Installation ==
 
 This section describes how to install the plugin and get it working.
