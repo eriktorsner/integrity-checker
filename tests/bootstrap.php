@@ -4,6 +4,7 @@ require_once __DIR__.'/class-wp-error.php';
 require_once __DIR__ . '/MockObjects.php';
 
 // Call the bootstrap method of WP Mock
+@mkdir(__DIR__ . '/fixtures/var', 0777, true);
 define('ABSPATH', __DIR__ . '/fixtures/var/');
 
 WP_Mock::bootstrap();
