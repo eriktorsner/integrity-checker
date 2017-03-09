@@ -1,22 +1,55 @@
 <?php
 namespace integrityChecker;
 
+/**
+ * Class AdminUIHooks
+ *
+ * @package integrityChecker
+ */
 class AdminUIHooks
 {
+    /**
+     * @var null
+     */
     private $pluginInfo = null;
+
+    /**
+     * @var Settings
+     */
+    private $settings;
+
+    /**
+     * @var State
+     */
+    private $state;
+
+    /**
+     * AdminUIHooks constructor.
+     *
+     * @param $settings
+     * @param $state
+     */
+    public function __construct($settings, $state)
+    {
+        $this->settings= $settings;
+        $this->state = $state;
+    }
+
+    /**
+     * Register hooks
+     */
     public function register()
     {
         global $pagenow;
 
-        $plugin = integrityChecker::getInstance();
-
         add_action('load-plugins.php', array($this, 'loadPlugins'));
-        add_filter('plugin_action_links_' . $plugin->getPluginBaseName(), array($this, 'pluginActionLinks'), 10, 1);
+
+        $baseName = plugin_basename(dirname(__DIR__) . '/integrity-checker.php');
+        add_filter('plugin_action_links_' . $baseName, array($this, 'pluginActionLinks'), 10, 1);
+
         if ($pagenow == 'update.php') {
             add_filter('site_transient_update_plugins', array($this, 'modifyPluginsTransient'), 99, 2);
         }
-
-
     }
 
     /**
@@ -33,8 +66,7 @@ class AdminUIHooks
             };
         }
 
-        $state = new State();
-        $checksumResults = $state->getTestResult('checksum');
+        $checksumResults = $this->state->getTestResult('checksum');
         if ($checksumResults && isset($checksumResults['plugins'])) {
             foreach ($checksumResults['plugins'] as $plugin) {
                 if ($plugin->hardIssues > 0) {
@@ -46,6 +78,11 @@ class AdminUIHooks
         }
     }
 
+    /**
+     * @param $pluginFile
+     * @param $pluginData
+     * @param $status
+     */
     public function offerUpdate($pluginFile, $pluginData, $status)
     {
 
@@ -68,19 +105,27 @@ class AdminUIHooks
         include __DIR__ . '/Admin/views/PluginUpdateAlert.php';
     }
 
+    /**
+     * @param $links
+     *
+     * @return array
+     */
     public function pluginActionLinks($links)
     {
-        $plugin = integrityChecker::getInstance();
-        $url = admin_url('tools.php?page=' . $plugin->getPluginSlug(). '_options');
+        $url = admin_url('tools.php?page=' . $this->settings->slug . '_options');
 
         return array_merge(
             $links,
-            array(
-                '<a href="' . $url . '">Settings</a>'
-            )
+            array('settings' => '<a href="' . $url . '">Settings</a>')
         );
     }
 
+    /**
+     * @param $value
+     * @param $transient
+     *
+     * @return mixed
+     */
     public function modifyPluginsTransient($value, $transient)
     {
         // Modify the transient to slip by WP's same version check
@@ -92,6 +137,11 @@ class AdminUIHooks
         return $value;
     }
 
+    /**
+     * @param $pluginFile
+     *
+     * @return null|object
+     */
     private function getPluginInfo($pluginFile)
     {
         require_once ABSPATH.'/wp-admin/includes/plugin-install.php';

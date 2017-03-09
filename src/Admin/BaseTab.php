@@ -23,6 +23,21 @@ class BaseTab
     public $active = false;
 
     /**
+     * @var \integrityChecker\Settings
+     */
+    public $settings;
+
+    /**
+     * BaseTab constructor.
+     *
+     * @param \integrityChecker\Settings $settings
+     */
+    public function __construct($settings)
+    {
+        $this->settings = $settings;
+    }
+
+    /**
      * The URL for this tab
      * @return string
      */

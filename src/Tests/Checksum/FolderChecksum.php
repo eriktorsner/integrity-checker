@@ -32,6 +32,14 @@ class FolderChecksum
     public $includeOwner = false;
 
     /**
+     * Max file size for checksum calculation
+     * default: 20M
+     *
+     * @var int
+     */
+    public $maxFileSize = 20971520;
+
+    /**
      * Path to scan
      *
      * @var string
@@ -180,7 +188,7 @@ class FolderChecksum
         $relfile = substr($file, strlen($base));
 
         if ($this->calcHash) {
-            if ($stat['size'] < 1024 * 1024 * 1) {
+            if ($stat['size'] < $this->maxFileSize) {
                 $sum = md5_file($file);
             } else {
                 $i = 0;

@@ -8,6 +8,36 @@ namespace integrityChecker;
 class Process
 {
     /**
+     * @var array
+     */
+    private $testFactory;
+
+    /**
+     * @var State
+     */
+    private $state;
+
+    /**
+     * @var BackgroundProcess
+     */
+    private $backgroundProcess;
+
+    /**
+     * Process constructor.
+     *
+     * @param Tests\TestFactory $testFactory
+     * @param Settings $settings
+     * @param State $state
+     * @param BackgroundProcess $backgroundProcess
+     */
+    public function __construct($testFactory, $settings, $state, $backgroundProcess)
+    {
+        $this->testFactory= $testFactory;
+        $this->state = $state;
+        $this->backgroundProcess = $backgroundProcess;
+    }
+
+    /**
      * Return the current status of all or a single test
      *
      * @param \WP_REST_Request $request
@@ -17,17 +47,14 @@ class Process
     public function status($request)
     {
         // Make sure we recognize the testName
-        $integrityChecker = integrityChecker::getInstance();
-        $tests = $integrityChecker->getTestNames();
         $name = $request->get_param('name');
-        if (!is_null($name) && !in_array($name, $tests)) {
+        if (!is_null($name) && !$this->testFactory->hasTest($name)) {
             return new \WP_Error('fail', 'Unknown test name', array('status' => 404));
         }
 
-        $state = new State();
         $procStates = array();
-        foreach ($tests as $testName) {
-            $procStates[$testName] = $state->getTestState($testName);
+        foreach ($this->testFactory->getTestNames() as $testName) {
+            $procStates[$testName] = $this->state->getTestState($testName);
         }
 
         if (!is_null($name)) {
@@ -48,10 +75,7 @@ class Process
     public function update($request)
     {
         $name = $request->get_param('name');
-        $integrityChecker = integrityChecker::getInstance();
-        $tests = $integrityChecker->getTestNames();
-
-        if (is_null($name) || !in_array($name, $tests)) {
+        if (is_null($name) || !$this->testFactory->hasTest($name)) {
             return new \WP_Error('fail', 'Unknown test name', array('status' => 404));
         }
 
@@ -69,7 +93,8 @@ class Process
         switch ($payload->state) {
             case 'started':
 	            // TODO: Allow restart when current state is older than XX seconds
-                $obj = $this->testFactory($name);
+                $obj = $this->testFactory->getTestObject($name);
+                $obj->setBackgroundProcess($this->backgroundProcess);
                 $obj->start($request);
                 return $obj->state();
                 break;
@@ -88,55 +113,23 @@ class Process
     public function getTestResults($request)
     {
         $name = $request->get_param('name');
-        $integrityChecker = integrityChecker::getInstance();
-        $tests = $integrityChecker->getTestNames();
-
-        // exit if it's not a known testName
-        if (is_null($name) || !in_array($name, $tests)) {
+        if (is_null($name) || !$this->testFactory->hasTest($name)) {
             return new \WP_Error('fail', 'Unknown test name', array('status' => 404));
         }
 
         // Get the test result from options
-        $state = new State();
-        $result = $state->getTestResult($name);
+        $result = $this->state->getTestResult($name);
 
         // The test class might want to add details
-        $objTest = $this->testFactory($name);
+        $objTest = $this->testFactory->getTestObject($name);
+        $objTest->setBackgroundProcess($this->backgroundProcess);
+        $objTest->setBackgroundProcess($this->backgroundProcess);
 
         return $objTest->getRestResults($result);
 
     }
 
-    /**
-     * @param $testName
-     *
-     * @return Tests\BaseTest
-     */
-    public function testFactory($testName)
-    {
-        switch ($testName) {
-            case 'scanall':
-                return Tests\ScanAll::getInstance();
-                break;
-            case 'checksum':
-                return Tests\Checksum::getInstance();
-                break;
-            case 'permissions':
-                return Tests\Permissions::getInstance();
-                break;
-            case 'modifiedfiles':
-                return Tests\ModifiedFiles::getInstance();
-                break;
-            case 'modifiedfiles':
-                return Tests\ModifiedFiles::getInstance();
-                break;
-            case 'settings':
-                return Tests\Settings::getInstance();
 
-        }
-
-        return null;
-    }
 
 
 }

@@ -1,7 +1,6 @@
 <?php
 namespace integrityChecker\Tests;
 
-use integrityChecker\ApiClient;
 use integrityChecker\BackgroundProcess;
 use integrityChecker\State;
 
@@ -67,47 +66,72 @@ class BaseTest
 	/**
 	 * @var string
 	 */
-	protected $session = null;
+	public $session = null;
 
     /**
-     * Singleton, ensure we have at most one instance of
-     * each test type
-     *
-     * @param null $session
-     *
-     * @return mixed
+     * @var BackgroundProcess
      */
-	static public function getInstance($session = null)
-	{
-		$class = get_called_class();
-		if (!array_key_exists($class, self::$instances)) {
-			self::$instances[$class] = new $class($session);
-		}
-		return self::$instances[$class];
-	}
+    protected $backgroundProcess = null;
+
+    /**
+     * @var \integrityChecker\Settings
+     */
+    protected $settings;
+
+    /**
+     * @var TestFactory
+     */
+    protected $testFactory;
+
+    /**
+     * @var State
+     */
+    private $state;
 
 
     /**
      * BaseTest constructor.
      *
-     * @param null $session
+     * @param \integrityChecker\Settings            $settings
+     * @param \integrityChecker\State               $state
+     * @param \integrityChecker\ApiClient           $apiClient
+     * @param \integrityChecker\TestFactory         $testFactory
      */
-	public function __construct($session = null)
+	public function __construct($settings, $state, $apiClient, $testFactory)
 	{
-		if ($session) {
-			$this->session = $session;
-			$this->transientState = get_transient( 'tt_teststate_' . $this->session);
-			if (!$this->transientState) {
-				$this->transientState = null;
-			}
-
-			$objState = new State();
-			$state = $objState->getTestState($this->name);
-			$this->started = $state->started;
-		}
-
-		$this->apiClient = new ApiClient();
+        $this->settings = $settings;
+        $this->state = $state;
+		$this->apiClient = $apiClient;
+        $this->testFactory = $testFactory;
 	}
+
+    /**
+     * @param BackgroundProcess $backgroundProcess
+     */
+    public function setBackgroundProcess($backgroundProcess)
+    {
+        $this->backgroundProcess = $backgroundProcess;
+    }
+
+    /**
+     * @param $session
+     */
+	public function init($session)
+    {
+        $this->session = $session;
+
+        // read transient state from database
+        if ($this->session && !$this->transientState) {
+            $this->transientState = get_transient('tt_teststate_' . $this->session);
+            // ensure transient state is null if get_transient returned false
+            if (!$this->transientState) {
+                $this->transientState = null;
+            }
+
+            $testState = $this->state->getTestState($this->name);
+            $this->started = $testState->started;
+        }
+    }
 
     /**
      * Store temporary state
@@ -121,6 +145,8 @@ class BaseTest
 
     /**
      * Called when test results are requested via REST
+     * Gives each subclass a chance to add data to the
+     * stored test results
      *
      * @param object $result
      *
@@ -144,8 +170,7 @@ class BaseTest
         $this->source = isset($payload->source) ? $payload->source : null;
         $this->sourceInstance = isset($payload->sourceInstance) ? $payload->sourceInstance: null;
 
-        $state = new State();
-        $state->updateTestState($this->name, $this->state());
+        $this->state->updateTestState($this->name, $this->state());
     }
 
     /**
@@ -155,14 +180,13 @@ class BaseTest
     {
         $this->finished = time();
         $this->stateString = 'finished';
-        $state = new State();
-        $state->updateTestState($this->name, $this->state());
+        $this->state->updateTestState($this->name, $this->state());
 
         if ($this->transientState) {
 	        if (is_array($this->transientState['result'])) {
 		        $this->transientState['result']['ts'] = $this->finished;
 	        }
-            $state->storeTestResult($this->name,  $this->transientState['result']);
+            $this->state->storeTestResult($this->name,  $this->transientState['result']);
         }
 
         $this->transientState = false;
@@ -170,7 +194,7 @@ class BaseTest
         delete_transient('tt_teststate_' . $this->session);
 	    delete_transient('tt_teststarted_' . $this->session);
 
-        do_action('integrity_checker_test_finished', $this->name, $this->state());
+        do_action("{$this->settings->slug}_test_finished", $this->name, $this->state());
 
     }
 
@@ -190,20 +214,30 @@ class BaseTest
         );
 
 	    if ($ret->finished === 0) {
-            $ret->session = $this->session;
-            $bgProcess = new BackgroundProcess($this->session);
-            $ret->jobCount = $bgProcess->jobCount();
+            $ret->jobCount = $this->backgroundProcess->jobCount();
 	    }
 
 	    return $ret;
     }
 
+    /**
+     * Store results using State class
+     * @param $result
+     */
     public function storeTestResult($result)
     {
-        $state = new State();
-        $state->storeTestResult($this->name, $result);
+        $this->state->storeTestResult($this->name, $result);
     }
 
+    /**
+     * Recursive glob
+     *
+     * @param string $path
+     * @param string $pattern
+     * @param int $flags
+     *
+     * @return array
+     */
     protected function rglob($path='', $pattern='*', $flags = 0)
     {
 	    $paths = glob($path.'*', GLOB_MARK|GLOB_ONLYDIR|GLOB_NOSORT);
@@ -214,6 +248,9 @@ class BaseTest
 	    return $files;
     }
 
+    /**
+     * Impersonate an administrator
+     */
     protected function impersonateAdmin()
     {
 
@@ -228,27 +265,47 @@ class BaseTest
     }
 
     /**
+     * Start a new background process, or latch on to an existing
+     *
      * @param $dependency
      * @param $limit
      *
      * @return BackgroundProcess
      */
-    protected function getBackgroundProcess($dependency, $request, $limit)
+    protected function initBackgroundProcess($dependency, $request, $limit)
     {
-        $objState = new State();
-        $state = $objState->getTestState($dependency->name);
+        // Did we even get a depednecy
+        if (is_null($dependency)) {
+            $this->backgroundProcess->init();
+            return;
+        }
 
+        // If the dependency finished recently, don't rerun it
+        $state = $this->state->getTestState($dependency->name);
         if ($state->state == 'finished' && time() < $state->finished + $limit) {
-            return new BackgroundProcess();
+            $this->backgroundProcess->init();
+            return;
         }
 
+        // If the dependency is already running, latch on to the existing session
         if ($state->state == 'started' && time() < $state->started + $limit) {
-            return new BackgroundProcess($state->session);
+            $this->backgroundProcess->init($state->session);
+            return;
         }
 
-        // Else start the dependant test
+        // Else start the dependent test, the backgroundProcess gets a session
+        // id as a side effect
         $dependency->start($request);
-        return new BackgroundProcess($dependency->session);
+    }
 
+    /**
+     * @return string
+     */
+    protected function getTableName()
+    {
+        global $wpdb;
+
+        $dbSlug = str_replace('-', '_', $this->settings->slug);
+        return $wpdb->prefix . $dbSlug. '_files';
     }
 }

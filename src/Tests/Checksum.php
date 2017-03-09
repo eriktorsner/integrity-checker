@@ -23,21 +23,21 @@ class Checksum extends BaseTest
 
     public function start($request)
     {
-	    $bgProcess = new BackgroundProcess();
-	    $this->session = $bgProcess->session;
+        $this->backgroundProcess->init();
 
-	    parent::start($request);
+        parent::start($request);
 
         $this->transientState = array();
+        $offset = $this->backgroundProcess->lastQueuePriority();
 
 	    // Get the jobs into the queue
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkCore'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkPlugins'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'checkThemes'));
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'shapeResult'), 20);
-	    $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'finish'), 99);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'checkCore'), $offset +1);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'checkPlugins'), $offset +1);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'checkThemes'), $offset +1);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'analyze'), $offset +20);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'finish'), $offset +99);
 
-	    $bgProcess->process();
+        $this->backgroundProcess->process();
 
     }
 
@@ -46,7 +46,7 @@ class Checksum extends BaseTest
      *
      * @param object $job
      */
-    public function shapeResult($job)
+    public function analyze($job)
     {
         $out = array(
             'core'    => array(),
@@ -133,11 +133,10 @@ class Checksum extends BaseTest
 
         $plugins = get_plugins();
 	    $this->transientState['plugins'] = array();
-	    $bgProcess = new BackgroundProcess($this->session);
 
         foreach ($plugins as $id => $plugin) {
-	        $bgProcess->addJob((object)array(
-				'class' => __CLASS__,
+	        $this->backgroundProcess->addJob((object)array(
+				'class' => $this->name,
 		        'method' => 'checkPlugin',
 		        'parameters' => array('id' => $id, 'plugin' => $plugin),
 	        ));

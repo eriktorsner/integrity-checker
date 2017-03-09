@@ -13,12 +13,19 @@ class State
     private $slug;
 
     /**
-     * State constructor.
+     * @var BackgroundProcess
      */
-    public function __construct()
+    private $backgroundProcess;
+
+    /**
+     * State constructor.
+     *
+     * @param string $slug
+     */
+    public function __construct($slug)
     {
-        $plugin = integrityChecker::getInstance();
-        $this->slug = $plugin->getPluginSlug();
+        $this->slug = $slug;
+        //$this->backgroundProcess = $backgroundProcess;
     }
 
     /**
@@ -34,10 +41,7 @@ class State
         $procStatus->startedIso = date('Y-m-d H:i:s', $procStatus->started);
         $procStatus->finishedIso = date('Y-m-d H:i:s', $procStatus->finished);
 
-        if (isset($procStatus->session)) {
-            $bgProcess = new BackgroundProcess($procStatus->session);
-            $procStatus->jobCount = $bgProcess->jobCount();
-        }
+        $procStatus = apply_filters($this->slug . '_test_state', $procStatus);
 
         return $procStatus;
     }
@@ -59,7 +63,7 @@ class State
 	 */
     public function storeTestResult($testName, $result)
     {
-        update_option("integrity-checker_result_{$testName}", $result, false);
+        update_option("{$this->slug}_result_{$testName}", $result, false);
     }
 
     /**

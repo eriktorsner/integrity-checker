@@ -5,6 +5,7 @@ require_once __DIR__ . '/Checksum/FolderChecksum.php';
 
 use integrityChecker\BackgroundProcess;
 use integrityChecker\integrityChecker;
+use integrityChecker\Settings;
 use WPChecksum\FolderChecksum;
 
 /**
@@ -18,78 +19,50 @@ class ScanAll extends BaseTest
      */
     public $name = 'scanall';
 
-    /**
-     * @var array
-     */
-    private $ignorePatterns;
-
-    /**
-     * @var string
-     */
-    private $tableName;
-
-    /**
-     * ScanAll constructor.
-     *
-     * @param null $session
-     */
-    public function __construct( $session ) {
-        global $wpdb;
-
-        parent::__construct( $session );
-
-        $this->ignorePatterns = array(
-            'wp-content/cache',
-            'wp-config.php',
-        );
-
-        $plugin = integrityChecker::getInstance();
-        $slug = str_replace('-', '_', $plugin->getPluginSlug());
-        $this->tableName = $wpdb->prefix . $slug . '_files';
-    }
 
     /**
      * @param $request
      */
     public function start($request)
     {
-        $bgProcess = new BackgroundProcess();
-        $this->session = $bgProcess->session;
+        global $wpdb;
+
+        $this->backgroundProcess->init();
 
         parent::start($request);
         $this->transientState = null;
 
         $this->clearTable(false);
 
-        $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'scan'), 10);
-        $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'shapeResult'), 20);
-        $bgProcess->addJob((object)array('class' => __CLASS__, 'method' => 'finish'), 99);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'scan'), 10);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'analyze'), 20);
+        $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'finish'), 99);
 
-        $bgProcess->process(true);
+        $this->backgroundProcess->process(true);
     }
 
     /**
-     * Main scan function. Will create jobs/tasks for each important sub folder
+     * Main scan function. Will create jobs for each included sub folder
+     * with prio = 10
      *
      * @param $job
      */
     public function scan($job)
     {
-        $bgProcess = new BackgroundProcess($this->session);
-        $bgProcess->addJob((object)array(
-            'class' => __CLASS__,
+        $this->backgroundProcess->addJob((object)array(
+            'class' => $this->name,
             'method' => 'scanFolder',
             'parameters' => array('folder' => ABSPATH, 'recursive' => false),
         ));
 
-        $bgProcess->addJob((object)array(
-            'class' => __CLASS__,
+        $this->backgroundProcess->addJob((object)array(
+            'class' => $this->name,
             'method' => 'scanFolder',
             'parameters' => array('folder' => ABSPATH . 'wp-admin', 'recursive' => true),
         ));
 
-        $bgProcess->addJob((object)array(
-            'class' => __CLASS__,
+        $this->backgroundProcess->addJob((object)array(
+            'class' => $this->name,
             'method' => 'scanFolder',
             'parameters' => array('folder' => ABSPATH . 'wp-includes', 'recursive' => true),
         ));
@@ -101,12 +74,12 @@ class ScanAll extends BaseTest
         $newJobs = array();
         foreach ($wpContentSubfolders as $folder) {
             $newJobs[] = (object)array(
-                'class' => __CLASS__,
+                'class' => $this->name,
                 'method' => 'scanFolder',
                 'parameters' => array('folder' => $folder, 'recursive' => false),
             );
         }
-        $bgProcess->addJobs($newJobs);
+        $this->backgroundProcess->addJobs($newJobs, 10);
     }
 
     /**
@@ -123,6 +96,7 @@ class ScanAll extends BaseTest
 
         $checkSummer = new FolderChecksum($folder, ABSPATH);
         $checkSummer->calcHash = true;
+        $checkSummer->maxFileSize = $this->settings->maxFileSize * 1024 * 1024;
         $checkSummer->includeFolderInfo = true;
         $checkSummer->includeOwner = true;
         $checkSummer->recursive = $recursive;
@@ -134,7 +108,7 @@ class ScanAll extends BaseTest
     /**
      * @param $job
      */
-    public function shapeResult($job)
+    public function analyze($job)
     {
         $files = $this->transientState;
         $this->transientState = array('result' => array(
@@ -144,8 +118,7 @@ class ScanAll extends BaseTest
 
         // store new checkpoint?
         $storeNew = true;
-        $plugin = integrityChecker::getInstance();
-        $slug = $plugin->getPluginSlug();
+        $slug = $this->settings->slug;
         $existingCheckpoint = get_option("{$slug}_files_checkpoint", false);
         if ($existingCheckpoint) {
             $maxCheckpointAge = 604800; // TODO: need a setting for this
@@ -163,19 +136,21 @@ class ScanAll extends BaseTest
         }
     }
 
+    /**
+     * Store the scan result in files table
+     *
+     * @param $files
+     */
     private function storeScanData($files)
     {
         global $wpdb;
 
-        $columns = array('checkpoint', 'name', 'namehash', 'hash', 'modified', 'isdir', 'islink', 'size', 'mask',
-            'fileowner', 'filegroup', 'mime', 'status');
-        $sqlTemplate = "INSERT into {$this->tableName}(" . join(',', $columns) . ") " .
-                       "VALUES(%d, %s, %s, %s, %d, %d, %d, %d, %d, %s, %s, %s, %s) ";
+        $tableName = $this->getTableName();
 
         foreach ($files->checksums as $name => $info) {
 
             $wpdb->insert(
-                $this->tableName,
+                $tableName,
                 array(
                     'checkpoint' => 0,
                     'name'       => $name,
@@ -194,25 +169,35 @@ class ScanAll extends BaseTest
         }
     }
 
+    /**
+     * Delete rows from the files table
+     *
+     * @param bool $checkpoint
+     */
     private function clearTable($checkpoint = false)
     {
         global $wpdb;
         $wpdb->delete(
-            $this->tableName,
+            $this->getTableName(),
             array('checkpoint' => $checkpoint ? '1' : 0)
         );
     }
 
+    /**
+     * Create a checkpoint from the current scan result
+     */
     private function setCheckpoint()
     {
         global $wpdb;
+        $tableName = $this->getTableName();
         $fields = 'name, namehash, hash, modified, isdir, islink, size, mask, fileowner, filegroup, mime, status';
         $this->clearTable(true);
-        $sql = "INSERT INTO {$this->tableName}(checkpoint, $fields)\n".
+        $sql = "INSERT INTO $tableName(checkpoint, $fields)\n".
                "  SELECT 1, $fields\n" .
-               "    FROM {$this->tableName} \n" .
+               "    FROM $tableName \n" .
                "    WHERE checkpoint = 0";
 
         $wpdb->query($sql);
     }
+
 }

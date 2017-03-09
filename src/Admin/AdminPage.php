@@ -17,26 +17,20 @@ class AdminPage {
     private $key = 'integrity-checker_options';
 
     /**
-     * Holds an instance of the object
-     *
-     * @var AdminPage
-     */
-    private static $instance = null;
-
-    /**
      * @var array
      */
     private $tabs = array();
 
-
     /**
      * Constructor
+     *
+     * @param \integrityChecker\Settings $settings
+     *
      * @since 1.0.0
      */
-    public function __construct()
+    public function __construct($settings)
     {
-        self::$instance = $this;
-        $this->title = __('Integrity Checker Options', 'integrity-checker');
+        $this->settings = $settings;
     }
 
     /**
@@ -47,6 +41,7 @@ class AdminPage {
      */
     public function register()
     {
+        $this->title = __('Integrity Checker Options', 'integrity-checker');
         add_action('admin_init', array($this, 'init'));
         add_action('admin_menu', array($this, 'adminMenu'));
     }
@@ -61,12 +56,12 @@ class AdminPage {
 
         if (isset($_REQUEST['page']) && $_REQUEST['page'] == $this->key) {
             $this->tabs = array(
-                new OverviewTab($this),
-                new ChecksumScanTab($this),
-                new FilesScanTab($this),
-                new SettingsScanTab($this),
-                new SettingsTab($this),
-                new AboutTab($this),
+                new OverviewTab($this->settings),
+                new ChecksumScanTab($this->settings),
+                new FilesScanTab($this->settings),
+                new SettingsScanTab($this->settings),
+                new SettingsTab($this->settings),
+                new AboutTab($this->settings),
             );
         }
     }
@@ -86,17 +81,6 @@ class AdminPage {
         );
     }
 
-    /**
-     * Returns the running object
-     *
-     * @return AdminPage
-     */
-    public static function get_instance()
-    {
-        return self::$instance;
-    }
-
-
 	/**
 	 * Enqueue admin scripts if it's our page
 	 *
@@ -108,18 +92,16 @@ class AdminPage {
             return;
         }
 
-        $plugin = integrityChecker::getInstance();
-
         wp_enqueue_script(
-            $plugin->getPluginSlug() . '-main',
-            plugins_url() . '/' . $plugin->getPluginSlug() . '/js/main.js',
+            $this->settings->slug . '-main',
+            plugins_url() . '/' . $this->settings->slug . '/js/main.js',
             array('jquery', 'backbone','wp-util', 'jquery-ui-dialog'),
-            $plugin->getVersion(),
+            INTEGRITY_CHECKER_VERSION,
             true
         );
 
         wp_localize_script(
-            $plugin->getPluginSlug() . '-main',
+            $this->settings->slug . '-main',
             'integrityCheckerApi',
             array(
                 'url'    => esc_url_raw(rtrim(rest_url(), '/')),
@@ -129,32 +111,32 @@ class AdminPage {
 
         wp_enqueue_script(
             'jqCron',
-            plugins_url() . '/' . $plugin->getPluginSlug() . '/js/jqCron.js',
-            array('jquery', $plugin->getPluginSlug() . '-main'),
-            $plugin->getVersion(),
+            plugins_url() . '/' . $this->settings->slug . '/js/jqCron.js',
+            array('jquery', $this->settings->slug . '-main'),
+            INTEGRITY_CHECKER_VERSION,
             true
         );
 
         wp_enqueue_style(
-            $plugin->getPluginSlug() . '-maincss',
-            plugins_url() . '/' . $plugin->getPluginSlug() . '/css/style.css',
+            $this->settings->slug . '-maincss',
+            plugins_url() . '/' . $this->settings->slug . '/css/style.css',
             array(),
-            $plugin->getVersion()
+            INTEGRITY_CHECKER_VERSION
         );
 
         wp_enqueue_style(
             'jqCron',
-            plugins_url() . '/' . $plugin->getPluginSlug() . '/css/jqCron.css',
+            plugins_url() . '/' . $this->settings->slug . '/css/jqCron.css',
             array(),
-            $plugin->getVersion()
+            INTEGRITY_CHECKER_VERSION
         );
 
 
         wp_enqueue_style(
-            $plugin->getPluginSlug() . '-fa',
-            plugins_url() . '/' . $plugin->getPluginSlug() . '/css/font-awesome.min.css',
+            $this->settings->slug . '-fa',
+            plugins_url() . '/' . $this->settings->slug . '/css/font-awesome.min.css',
             array(),
-            $plugin->getVersion()
+            INTEGRITY_CHECKER_VERSION
         );
 
         wp_enqueue_style('wp-jquery-ui-dialog');
@@ -162,10 +144,10 @@ class AdminPage {
         foreach ($this->tabs as $tab) {
             foreach ($tab->getScripts() as $script) {
                 wp_enqueue_script(
-                    $plugin->getPluginSlug() . $script['id'],
-                    plugins_url() . '/' . $plugin->getPluginSlug() . $script['file'],
+                    $this->settings->slug . $script['id'],
+                    plugins_url() . '/' . $this->settings->slug . $script['file'],
                     $script['deps'],
-                    $plugin->getVersion(),
+                    INTEGRITY_CHECKER_VERSION,
                     true
                 );
             }

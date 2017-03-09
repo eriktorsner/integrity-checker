@@ -1,6 +1,8 @@
 <?php
 namespace integrityChecker;
 
+use integrityChecker\Cron\FieldFactory;
+
 /**
  * Class Rest
  *
@@ -11,12 +13,39 @@ namespace integrityChecker;
 class Rest
 {
     /**
-     * Rest constructor.
-     * Register all REST endpoints
+     * @var Settings
      */
-    public function __construct()
+    private $settings;
+
+    /**
+     * @var ApiClient
+     */
+    private $apiClient;
+
+    /**
+     * @var Process
+     */
+    private $process;
+
+    /**
+     * @var FileDiff
+     */
+    private $fileDiff;
+
+    /**
+     * Rest constructor.
+     *
+     * @param $settings
+     * @param $apiClient
+     * @param $process
+     * @param $fileDiff
+     */
+    public function __construct($settings, $apiClient, $process, $fileDiff)
     {
-        add_action('rest_api_init', array($this, 'registerRestEndpoints'));
+        $this->settings = $settings;
+        $this->apiClient = $apiClient;
+        $this->process = $process;
+        $this->fileDiff = $fileDiff;
     }
 
     /**
@@ -38,8 +67,7 @@ class Rest
         register_rest_route('integrity-checker/v1', 'quota', array(
             'methods' => array('GET'),
             'callback' => function($request) {
-                $client = new ApiClient();
-                $ret =  $client->getQuota();
+                $ret =  $this->apiClient->getQuota();
 
                 return is_wp_error($ret)?
                     $ret:
@@ -52,8 +80,7 @@ class Rest
             'methods' => array('PUT'),
             'callback' => function($request) {
                 $apiKey = $request->get_param('apiKey');
-                $client = new ApiClient();
-                $ret =  $client->verifyApiKey($apiKey);
+                $ret =  $this->apiClient->verifyApiKey($apiKey);
 
                 return is_wp_error($ret)?
                     $this->errSend($ret):
@@ -66,8 +93,7 @@ class Rest
             'methods' => array('PUT'),
             'callback' => function($request) {
                 $email = $request->get_param('email');
-                $client = new ApiClient();
-                $ret =  $client->registerEmail($email);
+                $ret =  $this->apiClient->registerEmail($email);
 
                 return is_wp_error($ret)?
                     $ret:
@@ -85,8 +111,7 @@ class Rest
         register_rest_route('integrity-checker/v1', 'process/status', array(
             'methods' => array('GET'),
             'callback' => function($request) {
-                $proc = new Process();
-                $ret = $proc->status($request);
+                $ret = $this->process->status($request);
                 return is_wp_error($ret)?
                     $ret:
                     $this->jSend($ret);
@@ -97,8 +122,7 @@ class Rest
         register_rest_route('integrity-checker/v1', "process/status/$nameDef", array(
             'methods' => array('GET'),
             'callback' => function($request) {
-                $proc = new Process();
-                $ret = $proc->status($request);
+                $ret = $this->process->status($request);
                 return is_wp_error($ret)?
                     $ret:
                     $this->jSend($ret);
@@ -109,8 +133,7 @@ class Rest
         register_rest_route('integrity-checker/v1', "process/status/$nameDef", array(
             'methods' => array('PUT'),
             'callback' => function($request) {
-                $proc = new Process();
-                $ret = $proc->update($request);
+                $ret = $this->process->update($request);
                 return is_wp_error($ret)?
                     $ret:
                     $this->jSend($ret);
@@ -127,8 +150,7 @@ class Rest
         register_rest_route('integrity-checker/v1', "testresult/$nameDef", array(
             'methods' => array('GET'),
             'callback' => function($request) {
-                $proc = new Process();
-                $ret = $proc->getTestResults($request);
+                $ret = $this->process->getTestResults($request);
 
                 $escape = filter_var($request->get_param('esc'), FILTER_VALIDATE_BOOLEAN);
                 if ($escape) {
@@ -154,8 +176,7 @@ class Rest
                 $slug = $request->get_param('slug');
                 $file = $request->get_header('X-Filename');
 
-                $fileDiff = new FileDiff();
-                $ret = $fileDiff->getDiff($type, $slug, $file);
+                $ret = $this->fileDiff->getDiff($type, $slug, $file);
 
                 if (is_object($ret)) {
                     return $ret;
@@ -175,8 +196,7 @@ class Rest
             'methods' => array('GET'),
             'callback' => function($request) {
                 $emails = $request->get_param('emails');
-                $settings = new Settings();
-                $ret = $settings->testEmail($emails);
+                $ret = $this->settings->testEmail($emails);
                 return $ret;
             },
             'permission_callback' => array($this, 'checkPermissions'),
@@ -188,8 +208,7 @@ class Rest
                 $strBody = $request->get_body();
                 $newSettings = json_decode($strBody);
                 if ($newSettings) {
-                    $plugin = integrityChecker::getInstance();
-                    $ret = $plugin->settings->putSettings($newSettings);
+                    $ret = $this->settings->putSettings($newSettings);
 
                     return is_wp_error($ret)?
                         $ret:
@@ -203,25 +222,7 @@ class Rest
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
-
-
-	    /** *********************************************
-         *
-	     * Background processing
-         *
-         ***********************************************/
-	    register_rest_route('integrity-checker/v1', 'background/(?P<session>[a-zA-Z0-9-]+)', array(
-		    'methods' => array('GET'),
-		    'callback' => function($request) {
-			    $session = $request->get_param('session');
-			    $bgProcess = new BackgroundProcess($session);
-			    $bgProcess->process();
-                return null;
-		    }
-	    ));
     }
-
-
 
 
     /**

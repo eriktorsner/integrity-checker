@@ -56,11 +56,21 @@ class Settings
     public $maxFileSize;
 
     /**
-     * Local copy of the plugin slug
+     * @var string
+     */
+    public $fileOwners;
+
+    /**
+     * @var string
+     */
+    public $fileGroups;
+
+    /**
+     * The plugin slug
      *
      * @var string
      */
-    private $slug;
+    public $slug;
 
     /**
      * Keep info about getting and setting all parameters (DRY)
@@ -69,10 +79,14 @@ class Settings
      */
     private $settingParameters;
 
-    public function __construct()
+    /**
+     * Settings constructor.
+     *
+     * @param $slug
+     */
+    public function __construct($slug)
     {
-        $plugin = integrityChecker::getInstance();
-        $this->slug = $plugin->getPluginSlug();
+        $this->slug = $slug;
 
         $this->settingParameters = array(
             'cron' => array('option' => 'cron', 'type' => 'string', 'default' => '15 3 * * 1'),
@@ -84,7 +98,9 @@ class Settings
             'alertEmails' => array('option' => 'alerts_emails', 'type' => 'string', 'default' => ''),
             'fileMasks' => array('option' => 'file_masks', 'type' => 'string', 'default' => '0644, 0640, 0600'),
             'folderMasks' => array('option' => 'folder_masks', 'type' => 'string', 'default' => '0755, 0750, 0700'),
-            'maxFileSize' => array('option' => 'max_file_size', 'type' => 'int', 'default' => 2),
+            'fileOwners' => array('option' => 'file_owners', 'type' => 'string', 'default' => null),
+            'fileGroups' => array('option' => 'file_groups', 'type' => 'string', 'default' => null),
+            'maxFileSize' => array('option' => 'max_file_size', 'type' => 'num', 'default' => 2),
         );
 
         foreach ($this->settingParameters as $name => $par) {
@@ -98,6 +114,9 @@ class Settings
                     break;
                 case 'int':
                     $this->$name = (int)get_option($this->slug . '_' . $par['option'], $par['default']);
+                    break;
+                case 'num':
+                    $this->$name = (double)get_option($this->slug . '_' . $par['option'], $par['default']);
                     break;
             }
         }
@@ -129,10 +148,6 @@ class Settings
                     }
                     break;
                 case 'fileMasks':
-                    $param = $this->settingParameters[$settingName];
-                    $this->$settingName = join(', ', $this->validateFileMode($value));
-                    update_option($this->slug . '_' . $param['option'], $this->$settingName);
-                    break;
                 case 'folderMasks':
                     $param = $this->settingParameters[$settingName];
                     $this->$settingName = join(', ', $this->validateFileMode($value));
@@ -145,7 +160,9 @@ class Settings
                             case 'int':
                             case 'bool':
                                 $this->$settingName = (int)$value;
-
+                                break;
+                            case 'num':
+                                $this->$settingName = (double)$value;
                                 break;
                             case 'string':
                                 $this->$settingName = $value;
@@ -162,6 +179,11 @@ class Settings
         return $this;
     }
 
+    /**
+     * @param $str
+     *
+     * @return array
+     */
     private function validateFileMode($str)
     {
         $out = array();
@@ -188,6 +210,11 @@ class Settings
 
     }
 
+    /**
+     * @param $emails
+     *
+     * @return bool
+     */
     public function testEmail($emails)
     {
         $client = new ApiClient();

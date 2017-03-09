@@ -11,8 +11,10 @@ class SettingsTab extends BaseTab
      * ChecksumScanTab constructor.
      *
      */
-    public function __construct()
+    public function __construct($settings)
     {
+        parent::__construct($settings);
+
         $this->tabId = 'settings';
         $this->name = __('Settings','integrity-checker');
     }
