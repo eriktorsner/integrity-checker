@@ -64,7 +64,6 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $s->setBackgroundProcess(new \MockBackgroundProcess());
         $s->adminUsername($dummy);
         $t = $s->transientState;
-        print_r($t);
         $this->assertTrue($t['adminUsername']['acceptable']);
         $this->assertTrue(stripos($t['adminUsername']['result'], "does not exist") !==false);
 
@@ -79,7 +78,6 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $s->setBackgroundProcess(new \MockBackgroundProcess());
         $s->adminUsername($dummy);
         $t = $s->transientState;
-        print_r($t);
         $this->assertFalse($t['adminUsername']['acceptable']);
         $this->assertTrue(stripos($t['adminUsername']['result'], "Exists") !==false);
 
