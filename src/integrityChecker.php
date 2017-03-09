@@ -16,7 +16,7 @@ class integrityChecker
      * @since    1.0.0
      * @var      string
      */
-    public $pluginSlug = 'integrity-checker';
+    public $pluginSlug;
 
     /**
      * @var Settings
@@ -24,13 +24,19 @@ class integrityChecker
     public $settings;
 
     /**
-     * Instance of this class.
-     *
-     * @since    1.0.0
-     *
-     * @var      integrityChecker
+     * @var int
      */
-    protected static $instance = null;
+    private $dbVersion = 1;
+
+    /**
+     * @var
+     */
+    private $adminUIHooks;
+
+    /**
+     * @var
+     */
+    private $adminPage;
 
     /**
      * Internal identifier for the cron event
@@ -45,9 +51,10 @@ class integrityChecker
     private $cronInvervalName;
 
     /**
-     * @var int
+     * @var BackgroundProcess
      */
-    private $dbVersion = 1;
+    private $backgroundProcess;
+
 
     /**
      * Return the plugin slug.
@@ -59,18 +66,6 @@ class integrityChecker
     public function getPluginSlug()
     {
         return $this->pluginSlug;
-    }
-
-    /**
-     * Return plugin basename as returned by WordPress
-     *
-     * @since   1.0.0
-     *
-     * @return string Plugin basename
-     */
-    public function getPluginBaseName()
-    {
-        return plugin_basename(dirname(__DIR__) . '/integrity-checker.php');
     }
 
     /**
@@ -86,48 +81,25 @@ class integrityChecker
     }
 
     /**
-     * All integrityChecker owned tests
-     *
-     * @var array
-     */
-    private $testNames = array();
-
-    /**
-     * Return an instance of this class.
-     *
-     * @since     1.0.0
-     *
-     * @return    integrityChecker  A single instance of this class.
-     */
-    public static function getInstance()
-    {
-        // If the single instance hasn't been set, set it now.
-        if (null == self::$instance) {
-            self::$instance = new self;
-        }
-
-        return self::$instance;
-    }
-
-    /**
      * integrityChecker constructor.
-     */
-    public function __construct()
-    {
-        $this->scheduledScanCron = $this->pluginSlug . '_scheduled_scan';
-        $this->testNames = array(
-            'scanall', 'checksum', 'permissions', 'settings', 'filemonitor', 'modifiedfiles',
-        );
-
-        add_action("activate_{$this->pluginSlug}", array($this, 'activatePlugin'));
-    }
-
-    /**
      *
+     * @param Settings          $settings
+     * @param AdminUIHooks      $adminUIHooks
+     * @param Admin\AdminPage   $adminPage
+     * @param Rest              $rest
+     * @param BackgroundProcess $backgroundProcess
      */
-    public function getTestNames()
+    public function __construct($settings, $adminUIHooks, $adminPage, $rest, $backgroundProcess)
     {
-        return apply_filters('integrity-checker_get_test_names', $this->testNames);
+        $this->settings = $settings;
+        $this->adminUIHooks = $adminUIHooks;
+        $this->adminPage = $adminPage;
+        $this->rest = $rest;
+        $this->backgroundProcess = $backgroundProcess;
+
+        $this->pluginSlug = $settings->slug;
+
+        $this->scheduledScanCron = $this->pluginSlug . '_scheduled_scan';
     }
 
     /**
@@ -139,45 +111,37 @@ class integrityChecker
     public function init()
     {
 
-        $this->settings = new Settings();
-
         if (is_admin())
         {
             // Allow our own classes to register admin page etc.
             $this->registerClasses();
 
+            // Load plugin text domain
+            $this->loadPluginTextdomain();
         }
 
         // ensure correct DB version
         $this->checkDbVersion();
 
-        // Load plugin text domain
-        $this->loadPluginTextdomain();
-
         // Load the REST endpoints
-        $rest = new Rest();
+        add_action('rest_api_init', array($this->rest, 'registerRestEndpoints'));
+        add_action('rest_api_init', array($this->backgroundProcess, 'registerRestEndpoints'));
 
 	    // Hook up Background processes to cron
-	    $bgProgress = new BackgroundProcess();
-	    $bgProgress->registerCron();
+        $this->backgroundProcess->registerCron();
 
         // Reuse the 5-min interval defined in bgProcess and make sure it's scheduled
-        $this->cronInvervalName = $bgProgress->cronIntervalIdentifier;
+        $this->cronInvervalName = $this->backgroundProcess->cronIntervalIdentifier;
 
         // Handler for the scheduled events
         add_action($this->scheduledScanCron, array($this, 'runScheduledScans'));
 
         // Handler for finished tests
-        add_action('integrity_checker_test_finished', array($this, 'finishedTest'), 10, 2);
+        add_action("{$this->slug}_test_finished", array($this, 'finishedTest'), 10, 2);
 
-    }
+        // Handler for
+        add_filter("{$this->slug}_test_state", array($this, 'getTestState'), 10, 1);
 
-    /**
-     *
-     */
-    public function activatePlugin()
-    {
-        $this->createTables();
     }
 
     /**
@@ -198,7 +162,7 @@ class integrityChecker
     {
         if (is_admin()) {
 
-            $adminObjects = array(new AdminPage(), new AdminUIHooks());
+            $adminObjects = array($this->adminPage, $this->adminUIHooks);
             foreach ($adminObjects as $obj) {
                 $obj->register();
             }
@@ -247,8 +211,23 @@ class integrityChecker
         update_option($this->pluginSlug . '_dbversion', $this->dbVersion);
     }
 
+    /**
+     * @param object $procStatus
+     *
+     * @return object
+     */
+    public function getTestState($procStatus)
+    {
+        if (isset($procStatus->session) && $procStatus->finished === 0) {
+            $procStatus->jobCount = $this->backgroundProcess->jobCount($procStatus->session);
+        }
 
+        return $procStatus;
+    }
 
+    /**
+     *
+     */
     public function ensureScheduledTasks()
     {
         $reSchedule = false;
@@ -270,8 +249,15 @@ class integrityChecker
         }
     }
 
+    /**
+     * Launch scheduled scans, if enabled.
+     */
     public function runScheduledScans()
     {
+        if (!$this->settings->enableScheduleScans) {
+            return;
+        }
+
         $schedulerSessionId = md5(microtime(true));
         $tests = array();
 
@@ -281,8 +267,8 @@ class integrityChecker
         }
 
         if ($this->settings->scheduleScanPermissions) {
-            $this->startScheudledRestProcess('permissions', $schedulerSessionId);
-            $tests[] = 'permissions';
+            $this->startScheudledRestProcess('files', $schedulerSessionId);
+            $tests[] = 'files';
         }
 
         if ($this->settings->scheduleScanSettings) {
@@ -302,6 +288,12 @@ class integrityChecker
         $this->ensureScheduledTasks();
     }
 
+    /**
+     * Handle a finished scheduled scan.
+     *
+     * @param $testName
+     * @param $state
+     */
     public function finishedTest($testName, $state)
     {
         if (!isset($state->source) || $state->source !== 'scheduler') {
@@ -312,24 +304,18 @@ class integrityChecker
             return;
         }
 
-        wp_cache_delete('integrity_checker_scheduledrun');
-        $scheduledRun = get_option('integrity_checker_scheduledrun', new \stdClass());
+        wp_cache_delete("{$this->slug}_scheduledrun");
+        $scheduledRun = get_option("{$this->slug}_scheduledrun", new \stdClass());
         if ($state->sourceInstance === $scheduledRun->instance) {
             if(($key = array_search($testName, $scheduledRun->remainingTests)) !== false) {
                 unset($scheduledRun->remainingTests[$key]);
-                update_option('integrity_checker_scheduledrun', $scheduledRun);
+                update_option("{$this->slug}_scheduledrun", $scheduledRun);
             }
         }
 
         if (count($scheduledRun->remainingTests) == 0) {
             $this->finishedScheduledScans($scheduledRun);
         }
-    }
-
-    private function finishedScheduledScans($scheduledRun)
-    {
-        // This is where we analyze and perhaps trigger an alert.
-
     }
 
     private function startScheudledRestProcess($process, $schedulerSession)
@@ -350,5 +336,10 @@ class integrityChecker
             )),
         );
         wp_remote_post($url, $args);
+    }
+
+    private function finishedScheduledScans($scheduledRun)
+    {
+        // This is where we analyze and perhaps trigger an alert.
     }
 }
