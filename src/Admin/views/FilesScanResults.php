@@ -4,7 +4,7 @@
 
 <!-- wp-util templates -->
 <script type="text/html" id="tmpl-filesSummaryTmpl">
-    <?php $scanType = 'permissions';?>
+    <?php $scanType = 'files';?>
     <# if (data.state == 'finished') {#>
         <p>
             <strong><?php _e('Last scan finished', 'integrity-checker');?></strong>: {{{data.finishedIso}}}
@@ -26,7 +26,7 @@
 
     <div class="scanStatus <?php echo $scanType;?>" style="display: none;">
         <span class="jobCount"></span>
-        <?php _e("folders left to scan", "integrity-checker");?>
+        <?php _e("jobs left to process", "integrity-checker");?>
     </div>
 
 </script>

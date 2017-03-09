@@ -17,14 +17,14 @@
             <th><?php _e('Enable alerts', 'integrity-checker');?></th>
             <td>
                 <input type="checkbox" name="enableAlerts" value="1"
-                    <?php echo $settings->enableAlerts?'checked':'';?>>
+                    <?php echo $this->settings->enableAlerts?'checked':'';?>>
             </td>
         </tr>
 
         <tr>
             <th><?php _e('Email', 'integrity-checker');?></th>
             <td>
-                <input name="alertEmails" type="text" size="35" value="<?php echo $settings->alertEmails?>">
+                <input name="alertEmails" type="text" size="35" value="<?php echo $this->settings->alertEmails?>">
                 <a class="button-primary testAlertEmails">
                     <?php _e('Test', 'integrity-checker')?>
                 </a>

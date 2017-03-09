@@ -6,24 +6,7 @@
         <tr>
             <th><?php _e('Maximum file size', 'integrity-checker');?></th>
             <td>
-                <input name="maxFileSize" type="text" size="4" value="<?php echo $settings->maxFileSize?>"> Mb
-                <br>
-                <i>
-                    <?php _e(
-                        'During a scan, Integrity Checker calculates a file checksum (signature) for each file. ' .
-                        'This is CPU intense and time consuming, especially for large files such as images. ' .
-                        'For performance reasons you can skip checksum calculations for large files by specifying ' .
-                        'a size limit. Default 2M',
-                        'integrity-checker'
-                    )?>
-                </i>
-            </td>
-        </tr>
-
-        <tr>
-            <th><?php _e('Maximum file size', 'integrity-checker');?></th>
-            <td>
-                <input name="maxFileSize" type="text" size="4" value="<?php echo $settings->maxFileSize?>"> Mb
+                <input name="maxFileSize" type="text" size="4" value="<?php echo $this->settings->maxFileSize?>"> Mb
                 <br>
                 <i>
                     <?php _e(
@@ -40,7 +23,7 @@
         <tr>
             <th><?php _e('File permission modes', 'integrity-checker');?></th>
             <td>
-                <input name="fileMasks" type="text" size="35" value="<?php echo $settings->fileMasks?>">
+                <input name="fileMasks" type="text" size="35" value="<?php echo $this->settings->fileMasks?>">
                 <br>
                 <i>
                     <?php _e(
@@ -51,15 +34,50 @@
                 </i>
             </td>
         </tr>
+
         <tr>
             <th><?php _e('Folder permission modes', 'integrity-checker');?></th>
             <td>
-                <input name="folderMasks" type="text" size="35" value="<?php echo $settings->folderMasks?>">
+                <input name="folderMasks" type="text" size="35" value="<?php echo $this->settings->folderMasks?>">
                 <br>
                 <i>
                     <?php _e(
                         'Enter acceptable permission modes for folders. Separate multiple acceptable modes with comma ' .
                         'Default value: 0755, 0750, 0700',
+                        'integrity-checker'
+                    )?>
+                </i>
+            </td>
+        </tr>
+
+        <tr>
+            <th><?php _e('File and folder owner(s)', 'integrity-checker');?></th>
+            <td>
+                <input name="fileOwners" type="text" size="35" value="<?php echo $this->settings->fileOwners?>">
+                <br>
+                <i>
+                    <?php _e(
+                        'Enter the acceptable owner(s) of files and folder in this WordPress installation. Separate  ' .
+                        'multiple values with a comma. If left empty, the file scanner will assume that the owner of '.
+                        'a few files in the root installation folder is correct for all files and folder. ' .
+                        'Default value: [empty]',
+                        'integrity-checker'
+                    )?>
+                </i>
+            </td>
+        </tr>
+
+        <tr>
+            <th><?php _e('File and folder group(s)', 'integrity-checker');?></th>
+            <td>
+                <input name="fileGroups" type="text" size="35" value="<?php echo $this->settings->fileGroups?>">
+                <br>
+                <i>
+                    <?php _e(
+                        'Enter the acceptable group(s) of files and folder in this WordPress installation. Separate  ' .
+                        'multiple values with a comma. If left empty, the file scanner will assume that the group of '.
+                        'a few files in the root installation folder is correct for all files and folder. ' .
+                        'Default value: [empty]',
                         'integrity-checker'
                     )?>
                 </i>
