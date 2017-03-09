@@ -103,14 +103,19 @@ jQuery(document).ready(function($) {
         putRest(
             '/integrity-checker/v1/settings',
             {
+                'maxFileSize': $('input[name="maxFileSize"]').val(),
                 'fileMasks': $('input[name="fileMasks"]').val(),
                 'folderMasks': $('input[name="folderMasks"]').val(),
-                'maxFileSize': $('input[name="maxFileSize"]').val()
+                'fileOwners': $('input[name="fileOwners"]').val(),
+                'fileGroups': $('input[name="fileGroups"]').val()
             },
             function(data) {
+                $('input[name="maxFileSize"]').val(data.data.maxFileSize);
                 $('input[name="fileMasks"]').val(data.data.fileMasks);
                 $('input[name="folderMasks"]').val(data.data.folderMasks);
-                $('input[name="maxFileSize"]').val(data.data.maxFileSize);
+                $('input[name="fileOwners"]').val(data.data.fileOwners);
+                $('input[name="fileGroups"]').val(data.data.fileGroups);
+
                 $('.saveFileSettingsOk').show();
             },
             function(data) {
