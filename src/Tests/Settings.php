@@ -507,8 +507,8 @@ class Settings extends BaseTest
 	 */
 	public function weakWPCredentials($job)
     {
-	    $weakPasswords = ['password', '123456', '12345678', '1234', 'qwerty', '12345', 'dragon', 'secret', 'dragon',
-	        'pussy', '696969', 'mustang', 'abc123'];
+	    $weakPasswords = array('password', '123456', '12345678', '1234', 'qwerty', '12345', 'dragon', 'secret', 'dragon',
+	        'pussy', '696969', 'mustang', 'abc123');
 
 	    $users = get_users();
 
