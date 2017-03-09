@@ -36,6 +36,7 @@ function iCheckBootstrap()
 
     if (version_compare(PHP_VERSION, '5.3.9', '>=')) {
         require_once __DIR__ . '/vendor/autoload.php';
+        require_once __DIR__ . '/RuntimeProvider.php';
 
         if (!defined('INTEGRITY_CHECKER_ROOT')) {
             define('INTEGRITY_CHECKER_ROOT', __DIR__);
@@ -45,7 +46,10 @@ function iCheckBootstrap()
             define('INTEGRITY_CHECKER_VERSION', $pluginVersion);
         }
 
-        $iCheck = integrityChecker\integrityChecker::getInstance();
+        $app = new integrityChecker\Pimple\Container();
+        $app->register(new RuntimeProvider());
+        $iCheck = $app['interityChecker']; //new integrityChecker\integrityChecker(); //::getInstance();
+
         add_action('init', array($iCheck, 'init'));
 
     } else {
