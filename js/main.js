@@ -248,7 +248,7 @@ jQuery(document).ready(function($) {
                 case 'checksum':
                     renderChecksumScanResults();
                     break;
-                case 'permissions':
+                case 'files':
                     renderFilesScanResults();
                     break;
                 case 'settings':
@@ -311,21 +311,13 @@ jQuery(document).ready(function($) {
         var scanPermResults = $('#files-ownerandpermission-scan-results');
         var scanMonitorResults = $('#files-monitor-scan-results');
 
-        getRest('/integrity-checker/v1/process/status/permissions' + '?esc=1', function (data) {
+        getRest('/integrity-checker/v1/process/status/files' + '?esc=1', function (data) {
             scanSummary.html('');
             var summaryTmpl = wp.template('filesSummaryTmpl');
             $('<div></div>').html(summaryTmpl(data.data)).appendTo(scanSummary);
         });
 
-        getRest('/integrity-checker/v1/testresult/modifiedfiles' + '?esc=1', function (data) {
-            scanMonitorResults.html('');
-            if (data.data) {
-                var issuesTmpl = wp.template('filesMonitorIssuesTmpl');
-                $('<div></div>').html(issuesTmpl(data.data)).appendTo(scanMonitorResults);
-            }
-        });
-
-        getRest('/integrity-checker/v1/testresult/permissions' + '?esc=1', function (data) {
+        getRest('/integrity-checker/v1/testresult/files' + '?esc=1', function (data) {
             scanPermResults.html('');
             if (data.data) {
                 var issuesTmpl = wp.template('filesMaskOwnerIssuesTmpl');
