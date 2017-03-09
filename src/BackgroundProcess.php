@@ -48,37 +48,69 @@ class BackgroundProcess
 	 */
 	public $cronIntervalIdentifier;
 
+    /**
+     * @var Tests\TestFactory
+     */
+    private $testFactory;
+
 
 	/**
 	 * BackgroundProcess constructor.
 	 *
-	 * @param null $session
-	 * @param array $settings
+     * @param Tests\TestFactory $testFactory
 	 */
-	public function __construct($session = null, $settings = array())
+	public function __construct($testFactory)
 	{
+        $this->testFactory = $testFactory;
 		$this->cronHookIdentifier     = $this->prefix . '_cron';
 		$this->cronIntervalIdentifier = $this->prefix . '_cron_interval';
-
-		if ($session) {
-			$this->session = $session;
-		} else {
-			$this->session = md5( microtime() . NONCE_SALT);
-		}
-
-		if (isset($settings['timeLimit'])) {
-			$this->timeLimit = $settings['timeLimit'];
-		}
-
-		if (isset($settings['memoryLimit'])) {
-			$this->memoryLimit = $settings['memoryLimit'];
-		}
-
-		if (isset($settings['prefix'])) {
-			$this->prefix = $settings['prefix'];
-		}
-
 	}
+
+	public function init($session = null)
+    {
+        if ($session) {
+            $this->session = $session;
+        } else {
+            $this->session = md5( microtime() . NONCE_SALT);
+        }
+    }
+
+    public function registerRestEndPoints()
+    {
+        register_rest_route('integrity-checker/v1', 'background/(?P<session>[a-zA-Z0-9-]+)', array(
+            'methods' => array('GET'),
+            'callback' => function($request) {
+                $session = $request->get_param('session');
+                $this->init($session);
+                $this->process();
+                return null;
+            }
+        ));
+    }
+
+    /**
+     * @param int $memoryLimit
+     */
+    public function setMemoryLimit($memoryLimit)
+    {
+        $this->memoryLimit = $memoryLimit;
+    }
+
+    /**
+     * @param int $timeLimit
+     */
+    public function setTimeLimit($timeLimit)
+    {
+        $this->timeLimit = $timeLimit;
+    }
+
+    /**
+     * @param string $prefix
+     */
+    public function setPrefix($prefix)
+    {
+        $this->prefix = $prefix;
+    }
 
 	/**
 	 * Make sure we catch stalled or failed processes via cron
@@ -187,7 +219,9 @@ class BackgroundProcess
 	{
 		$class = $job->class;
 		$method = $job->method;
-		$obj = $class::getInstance($this->session);
+        $obj = $this->testFactory->getTestObject($class);
+        $obj->setBackgroundProcess($this);
+        $obj->init($this->session);
 		$obj->$method($job);
 
 		return $obj;
@@ -291,12 +325,14 @@ class BackgroundProcess
 
 	/**
 	 * @param string $name
+     * @param string $session (optional)
 	 *
 	 * @return string
 	 */
-	private function transientName($name)
+	private function transientName($name, $session = null)
 	{
-		return $this->prefix . '_' . $name . '_' . $this->session;
+        $session = $session ? $session : $this->session;
+		return $this->prefix . '_' . $name . '_' . $session;
 	}
 
 	/**
@@ -366,9 +402,9 @@ class BackgroundProcess
      *
      * @return int
      */
-    public function jobCount()
+    public function jobCount($session = null)
     {
-        $queueTransientName = $this->transientName('queue');
+        $queueTransientName = $this->transientName('queue', $session);
         $jobs = $this->getQueue($queueTransientName);
 
         return count($jobs);
