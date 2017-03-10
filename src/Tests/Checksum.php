@@ -90,8 +90,8 @@ class Checksum extends BaseTest
 
                 foreach ($item['changeset'] as $fileName => $issue) {
                     $issue->file = $fileName;
-                    if (isset($issue->date)) {
-                        $issue->date = date('Y-m-d H:i:s', $issue->date);
+                    if (isset($issue->date) && (int)$issue->date > 0) {
+                        $issue->date = date('Y-m-d H:i:s', (int)$issue->date);
                     } else {
                         $issue->date = '';
                     }
@@ -173,7 +173,7 @@ class Checksum extends BaseTest
         $out = array();
         foreach ($themes as $slug => $theme) {
             // Don't attempt to check child themes
-            if ($theme->template != $slug) {
+            if ($theme['template'] != $slug) {
                 continue;
             }
             $checker = new ThemeChecker($this->apiClient, false);
