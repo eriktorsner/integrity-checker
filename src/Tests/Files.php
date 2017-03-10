@@ -92,7 +92,7 @@ class Files extends BaseTest
                 $total++;
                 $issue = $this->analyzeFile($row, $acceptableOwnerGroup);
 
-                if (!is_array($updates[$issue])) {
+                if (!isset($updates[$issue]) || !is_array($updates[$issue])) {
                     $updates[$issue] = array();
                 }
                 $updates[$issue][] = $row->id;
@@ -212,8 +212,12 @@ class Files extends BaseTest
         $tableName = $this->getTableName();
 
         $ret = (object)array(
-            'owner' => explode(',', $this->settings->fileOwners),
-            'group' => explode(',', $this->settings->fileGroups),
+            'owner' => strlen(trim($this->settings->fileOwners)) > 0 ?
+                explode(',', $this->settings->fileOwners) :
+                false,
+            'group' => strlen(trim($this->settings->fileGroups)) > 0 ?
+                explode(',', $this->settings->fileGroups) :
+                false,
         );
 
         // if we have both via options
