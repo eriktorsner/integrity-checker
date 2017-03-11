@@ -9,7 +9,7 @@ class RuntimeProvider implements ServiceProviderInterface
     {
         $slug = 'integrity-checker';
         $tests = array(
-            'checksum' => '\integrityChecker\Tests\Checksum',
+            'checksum' => 'integrityChecker\Tests\Checksum',
             'scanall'  => 'integrityChecker\Tests\ScanAll',
             'files'    => 'integrityChecker\Tests\Files',
             'settings' => 'integrityChecker\Tests\Settings',
