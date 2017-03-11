@@ -116,9 +116,10 @@ class integrityChecker
             // Allow our own classes to register admin page etc.
             $this->registerClasses();
 
-            // Load plugin text domain
-            $this->loadPluginTextdomain();
         }
+
+        // Load plugin text domain
+        $this->loadPluginTextdomain();
 
         // ensure correct DB version
         $this->checkDbVersion();
@@ -137,10 +138,10 @@ class integrityChecker
         add_action($this->scheduledScanCron, array($this, 'runScheduledScans'));
 
         // Handler for finished tests
-        add_action("{$this->slug}_test_finished", array($this, 'finishedTest'), 10, 2);
+        add_action("{$this->pluginSlug}_test_finished", array($this, 'finishedTest'), 10, 2);
 
         // Handler for
-        add_filter("{$this->slug}_test_state", array($this, 'getTestState'), 10, 1);
+        add_filter("{$this->pluginSlug}_test_state", array($this, 'getTestState'), 10, 1);
 
     }
 
@@ -304,12 +305,12 @@ class integrityChecker
             return;
         }
 
-        wp_cache_delete("{$this->slug}_scheduledrun");
-        $scheduledRun = get_option("{$this->slug}_scheduledrun", new \stdClass());
+        wp_cache_delete("{$this->pluginSlug}_scheduledrun");
+        $scheduledRun = get_option("{$this->pluginSlug}_scheduledrun", new \stdClass());
         if ($state->sourceInstance === $scheduledRun->instance) {
             if(($key = array_search($testName, $scheduledRun->remainingTests)) !== false) {
                 unset($scheduledRun->remainingTests[$key]);
-                update_option("{$this->slug}_scheduledrun", $scheduledRun);
+                update_option("{$this->pluginSlug}_scheduledrun", $scheduledRun);
             }
         }
 
