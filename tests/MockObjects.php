@@ -2,13 +2,23 @@
 
 class MockBackgroundProcess
 {
+    public $jobs = array();
     public $session = 'abc123';
 
     public function init() {}
-    public function addJob($job, $priority = 10) {}
     public function process($yield = false) {}
     public function jobCount() { return 0; }
     public function lastQueuePriority() { return 10; }
+
+    public function addJob($job, $priority = 10) {
+        $this->jobs[] = $job;
+    }
+
+    public function addJobs($jobs, $priority = 10) {
+        foreach ($jobs as $job) {
+            $this->jobs[] = $job;
+        }
+    }
 
     public function initBackgroundProcess($test, $request, $limit)
     {
@@ -41,10 +51,12 @@ class MockSettings
     public $fileGroups = 'www-data';
     public $fileMasks = '0644,0640,0600';
     public $folderMasks = '0755,0750,0700';
+    public $maxFileSize = 1024 * 1024 * 2;
 }
 
 class MockState
 {
+    public $arr = array();
     public function __construct($arr = false)
     {
         if ($arr) {
@@ -52,7 +64,8 @@ class MockState
         }
     }
 
-    public function updateTestState() {
+    public function updateTestState()
+    {
 
     }
 
@@ -61,6 +74,11 @@ class MockState
         if (isset($this->arr[$testName])) {
             return $this->arr[$testName];
         }
+    }
+
+    public function storeTestResult($name, $result)
+    {
+        $this->arr[$name] = $result;
     }
 }
 
@@ -85,15 +103,40 @@ class MockTestFactory
     }
 }
 
-class MockTest
+class MockTest extends \integrityChecker\Tests\BaseTest
 {
-    public function __construct($name)
+    public function __construct($name, $state = null)
     {
         $this->name = $name;
+        $this->state = $state;
+        parent::__construct(new MockSettings(), $state, null, null);
+    }
+
+    public function setSession($session)
+    {
+        $this->session = $session;
     }
 
     public function setBackgroundProcess($p)
     {
+        $this->backgroundProcess = $p;
 
+    }
+
+    public function getTestState($name)
+    {
+        if ($this->arr[$name]) {
+            return $this->arr[$name];
+        }
+    }
+
+    public function startWDependency($dep, $request, $limit)
+    {
+        $this->initBackgroundProcess($dep, $request, $limit);
+    }
+
+    public function start($request)
+    {
+        $this->session = 'startedbymockstart';
     }
 }

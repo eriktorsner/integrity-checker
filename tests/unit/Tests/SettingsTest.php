@@ -7,7 +7,6 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         \WP_Mock::setUp();
-        \WP_Mock::wpPassthruFunction('__', 'a');
     }
 
     public function tearDown()
