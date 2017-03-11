@@ -110,13 +110,13 @@ class Settings
                     $this->$name = $value;
                     break;
                 case 'bool':
-                    $this->$name = (int)get_option($this->slug . '_' . $par['option'], $par['default']);
+                    $this->$name = (int)$value;
                     break;
                 case 'int':
-                    $this->$name = (int)get_option($this->slug . '_' . $par['option'], $par['default']);
+                    $this->$name = (int)$value;
                     break;
                 case 'num':
-                    $this->$name = (double)get_option($this->slug . '_' . $par['option'], $par['default']);
+                    $this->$name = (double)$value;
                     break;
             }
         }
@@ -131,8 +131,6 @@ class Settings
      */
     public function putSettings($settings)
     {
-        $plugin = integrityChecker::getInstance();
-
         foreach ($settings as $settingName => $value) {
 
             switch ($settingName) {
@@ -141,7 +139,7 @@ class Settings
                         $cronExpression = CronExpression::factory($value);
                         $this->cron = $value;
                         update_option($this->slug . '_cron', $this->cron);
-                        $plugin->ensureScheduledTasks();
+                        do_action($this->slug . '_ensure_scheduled_tasks');
 
                     } catch (\Exception $e) {
                         return new \WP_Error('fail', 'Invalid cron pattern', array('status' => 400));
@@ -184,7 +182,7 @@ class Settings
      *
      * @return array
      */
-    private function validateFileMode($str)
+    public function validateFileMode($str)
     {
         $out = array();
         $modes = explode(',', $str);
@@ -217,9 +215,7 @@ class Settings
      */
     public function testEmail($emails)
     {
-        $client = new ApiClient();
-        $client->testAlertEmails($emails);
-
+        do_action($this->slug . '_send_test_email');
         return true;
     }
 
