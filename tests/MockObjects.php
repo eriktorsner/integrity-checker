@@ -51,7 +51,7 @@ class MockSettings
     public $fileGroups = 'www-data';
     public $fileMasks = '0644,0640,0600';
     public $folderMasks = '0755,0750,0700';
-    public $maxFileSize = 1024 * 1024 * 2;
+    public $maxFileSize = 2097152; //2 MB
 }
 
 class MockState
