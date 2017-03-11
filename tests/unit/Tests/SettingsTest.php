@@ -2,7 +2,7 @@
 
 namespace integrityChecker;
 
-class SettingsTest extends \PHPUnit_Framework_TestCase
+class SettingsTestTest extends \PHPUnit_Framework_TestCase
 {
     public function setUp()
     {
