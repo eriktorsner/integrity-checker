@@ -110,10 +110,8 @@ class ScanAll extends BaseTest
      */
     public function analyze($job)
     {
-        $files = $this->transientState;
         $this->transientState = array('result' => array(
             'ts' => time(),
-            'files' => $files,
         ));
 
         // store new checkpoint?
