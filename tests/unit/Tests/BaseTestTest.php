@@ -103,7 +103,6 @@ class BaseTestTest extends \PHPUnit_Framework_TestCase
         $mockTest->setBackgroundProcess(new \MockBackgroundProcess());
         $dependency = new \MockTest('dependency', $state);
         $mockTest->startWDependency($dependency, $req, 900);
-        print_r($mockTest);
 
         $state = new \MockState(array(
             'dependency' => (object)array('state' => 'started', 'started' => time(), 'session' => '999123'),
@@ -112,7 +111,6 @@ class BaseTestTest extends \PHPUnit_Framework_TestCase
         $mockTest->setBackgroundProcess(new \MockBackgroundProcess());
         $dependency = new \MockTest('dependency', $state);
         $mockTest->startWDependency($dependency, $req, 900);
-        print_r($mockTest);
 
         $state = new \MockState(array(
             'dependency' => (object)array('state' => 'finished', 'finished' => 999),
@@ -121,6 +119,5 @@ class BaseTestTest extends \PHPUnit_Framework_TestCase
         $mockTest->setBackgroundProcess(new \MockBackgroundProcess());
         $dependency = new \MockTest('dependency', $state);
         $mockTest->startWDependency($dependency, $req, 900);
-        print_r($mockTest);
     }
 }

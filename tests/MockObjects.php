@@ -4,11 +4,13 @@ class MockBackgroundProcess
 {
     public $jobs = array();
     public $session = 'abc123';
+    public $cronIntervalIdentifier = 'tt_foobar';
 
     public function init() {}
     public function process($yield = false) {}
-    public function jobCount() { return 0; }
+    public function jobCount() { return 12; }
     public function lastQueuePriority() { return 10; }
+    public function registerCron() { }
 
     public function addJob($job, $priority = 10) {
         $this->jobs[] = $job;
@@ -139,4 +141,19 @@ class MockTest extends \integrityChecker\Tests\BaseTest
     {
         $this->session = 'startedbymockstart';
     }
+}
+
+class MockAdminUiHooks
+{
+    public function register() {}
+}
+
+class MockAdminPage
+{
+    public function register() {}
+}
+
+class MockRest
+{
+    public function register() {}
 }
