@@ -18,7 +18,7 @@ before_install:
 
 before_script:
   - composer install
-  - tests/install-wp-cli.sh
+  - source tests/install-wp-cli.sh
 
 script:
   - vendor/bin/phpunit
