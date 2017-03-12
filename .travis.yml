@@ -35,7 +35,7 @@ install:
   - travis/install-wp-cli.sh
 
 script:
-  - vendor/bin/phpunit --testsuite=Unit
+  - vendor/bin/phpunit
 
 after_success:
     - bash <(curl -s https://codecov.io/bash)
