@@ -204,7 +204,7 @@ class integrityChecker
           status enum('','deleted') NOT NULL DEFAULT '',
           PRIMARY KEY (id),
           KEY namehash (namehash),
-          KEY permissionsresult (permissionsresult),
+          KEY permissionsresult (permissionsresult)
         ) $charset_collate;";
 
         dbDelta($sql);
