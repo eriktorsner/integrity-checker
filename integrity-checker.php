@@ -36,7 +36,7 @@ function iCheckBootstrap()
 
     if (version_compare(PHP_VERSION, '5.3.9', '>=')) {
         require_once __DIR__ . '/vendor/autoload.php';
-        require_once __DIR__ . '/RuntimeProvider.php';
+        require_once __DIR__ . '/src/RuntimeProvider.php';
 
         if (!defined('INTEGRITY_CHECKER_ROOT')) {
             define('INTEGRITY_CHECKER_ROOT', __DIR__);
