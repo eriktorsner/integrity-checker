@@ -8,8 +8,9 @@ php:
   - '7.1'
 
 env:
-  - TEST_ENVIRONMENT=TRAVIS
-  - WP_CLI_BIN_DIR=/tmp/wp-cli-phar
+  global:
+    - TEST_ENVIRONMENT=TRAVIS
+    - WP_CLI_BIN_DIR=/tmp/wp-cli-phar
 
 services:
   - mysql
@@ -19,7 +20,7 @@ before_install:
 
 before_script:
   - composer install
-  - source tests/install-wp-cli.sh
+  - tests/install-wp-cli.sh
 
 script:
   - vendor/bin/phpunit
