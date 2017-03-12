@@ -5,17 +5,19 @@ require_once __DIR__ . '/MockObjects.php';
 
 global $mockRestEndpoints;
 
-// Call the bootstrap method of WP Mock
+$env = getenv('TEST_ENVIRONMENT');
+define('TEST_ENVIRONMENT', $env ? $env : 'VAGRANT');
+
 define('ABSPATH', __DIR__ . '/fixtures/var/');
 define('WP_PLUGIN_DIR', __DIR__ . '/fixtures/var/wp-content/plugins');
-@mkdir(ABSPATH, 0777, true);
-@mkdir(WP_PLUGIN_DIR, 0777, true);
-
 define('HOUR_IN_SECONDS', 3600);
 define('MINUTE_IN_SECONDS', 60);
 define('WP_MAX_MEMORY_LIMIT', 128);
 define('WP_MEMORY_LIMIT', 64);
 define('WP_AUTO_UPDATE_CORE', true);
+
+@mkdir(ABSPATH, 0777, true);
+@mkdir(WP_PLUGIN_DIR, 0777, true);
 
 WP_Mock::bootstrap();
 define('INTEGRITY_CHECKER_ROOT', dirname(__DIR__));
@@ -45,4 +47,55 @@ function register_rest_route($base, $endPoint, $args)
 
     $mockRestEndpoints[$base][$endPoint][$method] = $args;
 
+}
+
+function setUpWp()
+{
+    exec('rm -rf ' . ABSPATH . '*');
+
+    $path = ABSPATH;
+
+    switch (TEST_ENVIRONMENT) {
+        case 'VAGRANT':
+            _exec("rm -rf /vagrant/www/wordpress-test");
+            _exec("ln -s $path /vagrant/www/wordpress-test");
+            $url = 'http://test.devenv.local';
+            break;
+        case 'TRAVIS':
+            $url = 'http://localhost';
+            break;
+        default:
+            die("Unrecognized TEST_ENVIRONEMT " . TEST_ENVIRONMENT);
+    }
+
+    $configArgs =
+        ' --dbname=wordpress-test' .
+        ' --dbuser=wordpress' .
+        ' --dbpass=wordpress' .
+        ' --dbhost=localhost';
+
+    $installArgs =
+        " --url=$url" .
+        " --title=test" .
+        " --admin_user=admin" .
+        " --admin_password=admin" .
+        " --admin_email=admin@local.dev" .
+        " --skip-email";
+
+    // Set up WordPress
+    _exec("wp --path=$path core download");
+    _exec("wp --path=$path core config $configArgs");
+    _exec("wp --path=$path db reset --yes");
+    _exec("wp --path=$path core install $installArgs");
+
+    // Inject our plugin
+    $pluginPath = dirname(__DIR__);
+    _exec("ln -s $pluginPath $path/wp-content/plugins");
+    _exec("wp --path=$path plugin activate integrity-checker");
+}
+
+function _exec($cmd)
+{
+    echo "$cmd\n";
+    exec($cmd);
 }
