@@ -20,8 +20,8 @@ install_wp_cli() {
 }
 
 install_db() {
-	mysql -e 'CREATE DATABASE IF NOT EXISTS wordpress-test;' -uroot
-	mysql -e 'GRANT ALL PRIVILEGES ON wordpress-test.* TO "wordpress"@"localhost" IDENTIFIED BY "wordpress"' -uroot
+	mysql -e 'CREATE DATABASE IF NOT EXISTS `wordpress-test`;' -uroot
+	mysql -e 'GRANT ALL PRIVILEGES ON `wordpress-test`.* TO "wordpress"@"localhost" IDENTIFIED BY "wordpress"' -uroot
 }
 
 install_wp_cli
