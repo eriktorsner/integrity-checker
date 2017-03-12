@@ -3,7 +3,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__.'/class-wp-error.php';
 require_once __DIR__ . '/MockObjects.php';
 
-global $mockRestEndpoints;
+global $mockRestEndpoints, $testUrl;
 
 $env = getenv('TEST_ENVIRONMENT');
 define('TEST_ENVIRONMENT', $env ? $env : 'VAGRANT');
@@ -51,6 +51,8 @@ function register_rest_route($base, $endPoint, $args)
 
 function setUpWp()
 {
+    global $testUrl;
+
     exec('rm -rf ' . ABSPATH . '*');
 
     $path = ABSPATH;
@@ -69,6 +71,8 @@ function setUpWp()
         default:
             die("Unrecognized TEST_ENVIRONEMT " . TEST_ENVIRONMENT);
     }
+
+    $testUrl = $url;
 
     $configArgs =
         ' --dbname=wordpress-test' .
