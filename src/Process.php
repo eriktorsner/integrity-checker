@@ -97,7 +97,7 @@ class Process
                 $obj->setBackgroundProcess($this->backgroundProcess);
                 $obj->start($request);
                 return $obj->state();
-                break;
+                break; // @codeCoverageIgnore
         }
 
         return false;
