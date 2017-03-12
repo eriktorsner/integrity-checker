@@ -7,19 +7,31 @@ php:
   - '7.0'
   - '7.1'
 
+sudo: false
+
+services:
+  - mysql
+
 env:
   global:
     - TEST_ENVIRONMENT=TRAVIS
     - WP_CLI_BIN_DIR=/tmp/wp-cli-phar
 
-services:
-  - mysql
+addons:
+  apt:
+    packages:
+      - nginx
+      - realpath
+
+cache:
+  - apt
 
 before_install:
   - if [[ ${TRAVIS_PHP_VERSION:0:3} == "5.6" ]]; then composer require --dev --no-update phpunit/phpunit 5.7.5; fi
 
-before_script:
+install:
   - composer install
+  - travis/install-nginx.sh
   - tests/install-wp-cli.sh
 
 script:
