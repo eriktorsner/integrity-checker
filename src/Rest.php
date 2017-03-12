@@ -15,22 +15,22 @@ class Rest
     /**
      * @var Settings
      */
-    private $settings;
+    public $settings;
 
     /**
      * @var ApiClient
      */
-    private $apiClient;
+    public $apiClient;
 
     /**
      * @var Process
      */
-    private $process;
+    public $process;
 
     /**
      * @var FileDiff
      */
-    private $fileDiff;
+    public$fileDiff;
 
     /**
      * Rest constructor.
@@ -53,7 +53,7 @@ class Rest
      */
     public function registerRestEndpoints()
     {
-
+        $rest = $this;
         $typeDef = '(?P<type>[a-zA-Z0-9-]+)';
         $slugDef = '(?P<slug>[a-zA-Z0-9-]+)';
         $nameDef = '(?P<name>[a-zA-Z0-9-]+)';
@@ -66,38 +66,38 @@ class Rest
          ***********************************************/
         register_rest_route('integrity-checker/v1', 'quota', array(
             'methods' => array('GET'),
-            'callback' => function($request) {
-                $ret =  $this->apiClient->getQuota();
+            'callback' => function($request) use($rest) {
+                $ret =  $rest->apiClient->getQuota();
 
                 return is_wp_error($ret)?
                     $ret:
-                    $this->jSend($ret);
+                    $rest->jSend($ret);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
 
         register_rest_route('integrity-checker/v1', 'apikey', array(
             'methods' => array('PUT'),
-            'callback' => function($request) {
+            'callback' => function($request) use($rest) {
                 $apiKey = $request->get_param('apiKey');
-                $ret =  $this->apiClient->verifyApiKey($apiKey);
+                $ret =  $rest->apiClient->verifyApiKey($apiKey);
 
                 return is_wp_error($ret)?
-                    $this->errSend($ret):
-                    $this->jSend($ret);
+                    $rest->errSend($ret):
+                    $rest->jSend($ret);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
 
         register_rest_route('integrity-checker/v1', 'userdata', array(
             'methods' => array('PUT'),
-            'callback' => function($request) {
+            'callback' => function($request) use($rest) {
                 $email = $request->get_param('email');
-                $ret =  $this->apiClient->registerEmail($email);
+                $ret =  $rest->apiClient->registerEmail($email);
 
                 return is_wp_error($ret)?
                     $ret:
-                    $this->jSend($ret);
+                    $rest->jSend($ret);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
@@ -110,33 +110,33 @@ class Rest
          ***********************************************/
         register_rest_route('integrity-checker/v1', 'process/status', array(
             'methods' => array('GET'),
-            'callback' => function($request) {
-                $ret = $this->process->status($request);
+            'callback' => function($request) use($rest) {
+                $ret = $rest->process->status($request);
                 return is_wp_error($ret)?
                     $ret:
-                    $this->jSend($ret);
+                    $rest->jSend($ret);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
 
         register_rest_route('integrity-checker/v1', "process/status/$nameDef", array(
             'methods' => array('GET'),
-            'callback' => function($request) {
-                $ret = $this->process->status($request);
+            'callback' => function($request) use($rest) {
+                $ret = $rest->process->status($request);
                 return is_wp_error($ret)?
                     $ret:
-                    $this->jSend($ret);
+                    $rest->jSend($ret);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
 
         register_rest_route('integrity-checker/v1', "process/status/$nameDef", array(
             'methods' => array('PUT'),
-            'callback' => function($request) {
-                $ret = $this->process->update($request);
+            'callback' => function($request) use($rest) {
+                $ret = $rest->process->update($request);
                 return is_wp_error($ret)?
                     $ret:
-                    $this->jSend($ret);
+                    $rest->jSend($ret);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
@@ -149,17 +149,17 @@ class Rest
          ***********************************************/
         register_rest_route('integrity-checker/v1', "testresult/$nameDef", array(
             'methods' => array('GET'),
-            'callback' => function($request) {
-                $ret = $this->process->getTestResults($request);
+            'callback' => function($request) use($rest) {
+                $ret = $rest->process->getTestResults($request);
 
                 $escape = filter_var($request->get_param('esc'), FILTER_VALIDATE_BOOLEAN);
                 if ($escape) {
-                    $this->escapeObjectStrings($ret);
+                    $rest->escapeObjectStrings($ret);
                 }
 
                 return is_wp_error($ret)?
                     $ret:
-                    $this->jSend($ret);
+                    $rest->jSend($ret);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
@@ -171,12 +171,12 @@ class Rest
          ***********************************************/
         register_rest_route('integrity-checker/v1', "diff/$typeDef/$slugDef", array(
             'methods' => array('GET'),
-            'callback' => function($request) {
+            'callback' => function($request) use($rest) {
                 $type = $request->get_param('type');
                 $slug = $request->get_param('slug');
                 $file = $request->get_header('X-Filename');
 
-                $ret = $this->fileDiff->getDiff($type, $slug, $file);
+                $ret = $rest->fileDiff->getDiff($type, $slug, $file);
 
                 if (is_object($ret)) {
                     return $ret;
@@ -194,9 +194,9 @@ class Rest
          ***********************************************/
         register_rest_route('integrity-checker/v1', "testemail/$emailDef", array(
             'methods' => array('GET'),
-            'callback' => function($request) {
+            'callback' => function($request) use($rest) {
                 $emails = $request->get_param('emails');
-                $ret = $this->settings->testEmail($emails);
+                $ret = $rest->settings->testEmail($emails);
                 return $ret;
             },
             'permission_callback' => array($this, 'checkPermissions'),
@@ -204,15 +204,15 @@ class Rest
 
         register_rest_route('integrity-checker/v1', "settings", array(
             'methods' => array('PUT'),
-            'callback' => function($request) {
+            'callback' => function($request) use($rest) {
                 $strBody = $request->get_body();
                 $newSettings = json_decode($strBody);
                 if ($newSettings) {
-                    $ret = $this->settings->putSettings($newSettings);
+                    $ret = $rest->settings->putSettings($newSettings);
 
                     return is_wp_error($ret)?
                         $ret:
-                        $this->jSend($ret);
+                        $rest->jSend($ret);
                 }
                 return new \WP_Error(
                     'fail',
@@ -249,7 +249,7 @@ class Rest
      *
      * @return \WP_Error
      */
-    private function errSend($error)
+    public function errSend($error)
     {
         $errorData = $error->get_error_data();
         if (is_array($errorData ) && isset( $errorData['status'] ) ) {
@@ -271,7 +271,7 @@ class Rest
      * @param $response
      * @return object
      */
-    private function jSend($response)
+    public function jSend($response)
     {
         return (object)array(
             'code' => 'success',
@@ -285,7 +285,7 @@ class Rest
      *
      * @param $obj
      */
-    private function escapeObjectStrings(&$obj)
+    public function escapeObjectStrings(&$obj)
     {
         if (!$obj) {
             return;

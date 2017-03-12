@@ -77,12 +77,14 @@ class BackgroundProcess
 
     public function registerRestEndPoints()
     {
+        $rest = $this;
+
         register_rest_route('integrity-checker/v1', 'background/(?P<session>[a-zA-Z0-9-]+)', array(
             'methods' => array('GET'),
-            'callback' => function($request) {
+            'callback' => function($request) use($rest){
                 $session = $request->get_param('session');
-                $this->init($session);
-                $this->process();
+                $rest->init($session);
+                $rest->process();
                 return null;
             }
         ));
