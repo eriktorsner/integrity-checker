@@ -11,7 +11,7 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
     {
         global $testUrl;
 
-        $ret = file_get_contents($testUrl . '/index.php');
+        $ret = file_get_contents($testUrl);
         $this->assertTrue(strpos($ret, 'Just another WordPress site') !== false);
     }
 }
