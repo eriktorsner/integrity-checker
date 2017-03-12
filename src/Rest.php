@@ -239,7 +239,7 @@ class Rest
 		    }
 	    }
 
-        return true;
+        return false;
     }
 
     /**
