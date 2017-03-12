@@ -61,7 +61,8 @@ class AdminUIHooks
         $allPlugins = get_site_transient('update_plugins');
         if ($allPlugins && isset($allPlugins->checked)) {
             foreach ($allPlugins->checked as $key => $value) {
-                $slug = explode('/', $key)[0];
+                $parts = explode('/', $key);
+                $slug = $parts[0];
                 $slugs[$slug] = $key;
             };
         }
