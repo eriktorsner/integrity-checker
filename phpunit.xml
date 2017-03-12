@@ -7,8 +7,11 @@
         convertWarningsToExceptions="false"
 >
     <testsuites>
-        <testsuite name="Project Test Suite">
-            <directory>./tests/</directory>
+        <testsuite name="Unit">
+            <directory>./tests/unit</directory>
+        </testsuite>
+        <testsuite name="Functional">
+            <directory>./tests/functional</directory>
         </testsuite>
     </testsuites>
 
