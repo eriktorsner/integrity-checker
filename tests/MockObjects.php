@@ -53,6 +53,15 @@ class MockRequest
             }
         }
     }
+
+    public function get_param($name)
+    {
+        if (isset($this->arr['parameters'])) {
+            if (isset($this->arr['parameters'][$name])) {
+                return $this->arr['parameters'][$name];
+            }
+        }
+    }
 }
 
 class MockSettings
@@ -68,10 +77,14 @@ class MockSettings
 class MockState
 {
     public $arr = array();
-    public function __construct($arr = false)
+    public $result = array();
+    public function __construct($arr = false, $result = false)
     {
         if ($arr) {
             $this->arr = $arr;
+        }
+        if ($result) {
+            $this->result = $result;
         }
     }
 
@@ -93,6 +106,13 @@ class MockState
     {
         $this->arr[$name] = $result;
     }
+
+    public function getTestResult($testName)
+    {
+        if (isset($this->result[$testName])) {
+            return $this->result[$testName];
+        }
+    }
 }
 
 class MockApiClient
@@ -110,9 +130,30 @@ class MockApiClient
 
 class MockTestFactory
 {
+    public $arr = false;
+    public function __construct($arr = false)
+    {
+        $this->arr = $arr;
+    }
+
     public function getTestObject($str)
     {
-        return new MockTest($str);
+        if ($this->arr === false) {
+            return new MockTest($str);
+        }
+        if (isset($this->arr[$str])) {
+            return new MockTest($str);
+        }
+    }
+
+    public function hasTest($name)
+    {
+        return isset($this->arr[$name]);
+    }
+
+    public function getTestNames()
+    {
+        return array_keys($this->arr);
     }
 }
 

@@ -13,6 +13,9 @@ define('WP_PLUGIN_DIR', __DIR__ . '/fixtures/var/wp-content/plugins');
 
 define('HOUR_IN_SECONDS', 3600);
 define('MINUTE_IN_SECONDS', 60);
+define('WP_MAX_MEMORY_LIMIT', 128);
+define('WP_MEMORY_LIMIT', 64);
+define('WP_AUTO_UPDATE_CORE', true);
 
 WP_Mock::bootstrap();
 define('INTEGRITY_CHECKER_ROOT', dirname(__DIR__));
