@@ -96,7 +96,7 @@ function setUpWp()
 
     // Inject our plugin
     $pluginPath = dirname(__DIR__);
-    _exec("ln -s $pluginPath $path/wp-content/plugins");
+    _exec("ln -s $pluginPath {$path}wp-content/plugins");
     _exec("$wp --path=$path plugin activate integrity-checker");
 }
 
