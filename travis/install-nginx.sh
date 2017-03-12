@@ -53,5 +53,8 @@ tpl "$DIR/nginx.tpl.conf" "$DIR/nginx/nginx.conf"
 tpl "$DIR/fastcgi.tpl.conf" "$DIR/nginx/fastcgi.conf"
 tpl "$DIR/default-site.tpl.conf" "$DIR/nginx/sites-enabled/default-site.conf"
 
+tpl "$DIR/nginx.tpl.conf" "$DIR/nginx/nginx.conf"
+
 # Start nginx.
 nginx -c "$DIR/nginx/nginx.conf"
+
