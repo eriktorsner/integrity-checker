@@ -63,7 +63,7 @@ function setUpWp()
             $wp = "wp";
             break;
         case 'TRAVIS':
-            $url = 'http://localhost';
+            $url = 'http://localhost:8080';
             $wp = "\$WP_CLI_BIN_DIR/wp";
             break;
         default:
