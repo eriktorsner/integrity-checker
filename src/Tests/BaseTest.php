@@ -86,7 +86,7 @@ class BaseTest
     /**
      * @var State
      */
-    private $state;
+    protected $state;
 
 
     /**
