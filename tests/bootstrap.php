@@ -60,9 +60,11 @@ function setUpWp()
             _exec("rm -rf /vagrant/www/wordpress-test");
             _exec("ln -s $path /vagrant/www/wordpress-test");
             $url = 'http://test.devenv.local';
+            $wp = "wp";
             break;
         case 'TRAVIS':
             $url = 'http://localhost';
+            $wp = "\$WP_CLI_BIN_DIR/wp";
             break;
         default:
             die("Unrecognized TEST_ENVIRONEMT " . TEST_ENVIRONMENT);
@@ -83,15 +85,15 @@ function setUpWp()
         " --skip-email";
 
     // Set up WordPress
-    _exec("wp --path=$path core download");
-    _exec("wp --path=$path core config $configArgs");
-    _exec("wp --path=$path db reset --yes");
-    _exec("wp --path=$path core install $installArgs");
+    _exec("$wp --path=$path core download");
+    _exec("$wp --path=$path core config $configArgs");
+    _exec("$wp --path=$path db reset --yes");
+    _exec("$wp --path=$path core install $installArgs");
 
     // Inject our plugin
     $pluginPath = dirname(__DIR__);
     _exec("ln -s $pluginPath $path/wp-content/plugins");
-    _exec("wp --path=$path plugin activate integrity-checker");
+    _exec("$wp --path=$path plugin activate integrity-checker");
 }
 
 function _exec($cmd)
