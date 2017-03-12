@@ -147,7 +147,8 @@ class AdminUIHooks
     {
         require_once ABSPATH.'/wp-admin/includes/plugin-install.php';
         if (is_null($this->pluginInfo)) {
-            $slug = explode('/', $pluginFile)[0];
+            $parts = explode('/', $pluginFile);
+            $slug = $parts[0];
             $pluginApi = plugins_api(
                 'plugin_information',
                 array( 'slug' => $slug,
