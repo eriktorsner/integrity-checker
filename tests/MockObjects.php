@@ -44,6 +44,15 @@ class MockRequest
             return $this->arr['body'];
         }
     }
+
+    public function get_header($str)
+    {
+        if (isset($this->arr['headers'])) {
+            if (isset($this->arr['headers'][$str])) {
+                return $this->arr['headers'][$str];
+            }
+        }
+    }
 }
 
 class MockSettings
@@ -76,6 +85,8 @@ class MockState
         if (isset($this->arr[$testName])) {
             return $this->arr[$testName];
         }
+
+        return (object)array('started' => time());
     }
 
     public function storeTestResult($name, $result)
@@ -110,7 +121,10 @@ class MockTest extends \integrityChecker\Tests\BaseTest
     public function __construct($name, $state = null)
     {
         $this->name = $name;
-        $this->state = $state;
+        if (!$state) {
+            $state = new \MockState();
+        }
+
         parent::__construct(new MockSettings(), $state, null, null);
     }
 
@@ -130,6 +144,11 @@ class MockTest extends \integrityChecker\Tests\BaseTest
         if ($this->arr[$name]) {
             return $this->arr[$name];
         }
+    }
+
+    public function analyze($job)
+    {
+
     }
 
     public function startWDependency($dep, $request, $limit)
@@ -156,4 +175,14 @@ class MockAdminPage
 class MockRest
 {
     public function register() {}
+}
+
+class MockProcess
+{
+
+}
+
+class MockFileDiff
+{
+
 }

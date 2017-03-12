@@ -24,7 +24,9 @@ class SettingsSaltsTest extends \PHPUnit_Framework_TestCase
             'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT',
         );
         foreach ($salts as $salt) {
-            define($salt, 'areallybadsalt');
+            if (!defined($salt)) {
+                define($salt, 'areallybadsalt');
+            }
         }
 
 
@@ -49,7 +51,9 @@ class SettingsSaltsTest extends \PHPUnit_Framework_TestCase
             'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT',
         );
         foreach ($salts as $salt) {
-            define($salt, 'h T/HR6HE{-wV-a!>$_5k,6;&L.Q-JGP;6mDU9vJ:{iD9qBo+hb}O)#]OkPP`Mei');
+            if (!defined($salt)) {
+                define($salt, 'h T/HR6HE{-wV-a!>$_5k,6;&L.Q-JGP;6mDU9vJ:{iD9qBo+hb}O)#]OkPP`Mei');
+            }
         }
 
         $dummy = new \stdClass();
@@ -72,7 +76,9 @@ class SettingsSaltsTest extends \PHPUnit_Framework_TestCase
             'AUTH_SALT', 'SECURE_AUTH_SALT', 'NONCE_SALT',
         );
         foreach ($salts as $salt) {
-            define($salt, 'h T/HR6HE{-wV-a!>$_5k,6;&L.Q-JGP;6mDU9vJ:{iD9qBo+hb}O)#]OkPP`Mei');
+            if (!defined($salt)) {
+                define($salt, 'h T/HR6HE{-wV-a!>$_5k,6;&L.Q-JGP;6mDU9vJ:{iD9qBo+hb}O)#]OkPP`Mei');
+            }
         }
 
         $dummy = new \stdClass();
