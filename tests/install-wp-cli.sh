@@ -26,4 +26,4 @@ install_db() {
 
 install_wp_cli
 install_db
-alias wp='$WP_CLI_BIN_DIR/wp'
+alias wp=$WP_CLI_BIN_DIR/wp
