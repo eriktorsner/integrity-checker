@@ -32,7 +32,7 @@ before_install:
 install:
   - composer install
   - travis/install-nginx.sh
-  - tests/install-wp-cli.sh
+  - travis/install-wp-cli.sh
 
 script:
   - vendor/bin/phpunit
