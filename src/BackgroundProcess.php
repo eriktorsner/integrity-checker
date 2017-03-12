@@ -348,7 +348,7 @@ class BackgroundProcess
 		// Adds every 5 minutes to the existing schedules.
 		$schedules[$this->cronIntervalIdentifier] = array(
 			'interval' => MINUTE_IN_SECONDS * 5,
-			'display'  => sprintf( __( 'Every %d Minutes' ), 5),
+			'display'  => sprintf( __( 'Every %d Minutes', 'integrity-checker'), 5),
 		);
 		return $schedules;
 	}
