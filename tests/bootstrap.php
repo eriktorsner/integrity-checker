@@ -78,7 +78,8 @@ function setUpWp()
         ' --dbname=wordpress-test' .
         ' --dbuser=wordpress' .
         ' --dbpass=wordpress' .
-        ' --dbhost=localhost';
+        ' --dbhost=localhost' .
+        " --extra-php <<PHP\ndefine('INTEGRITY_CHECKER_NO_REST_AUTH',true);\nPHP";
 
     $installArgs =
         " --url=$url" .
@@ -98,6 +99,12 @@ function setUpWp()
     $pluginPath = dirname(__DIR__);
     _exec("ln -s $pluginPath {$path}wp-content/plugins");
     _exec("$wp --path=$path plugin activate integrity-checker");
+
+    // Ignore our plugin when doing checksum stuff
+    $ignore = json_encode(array("plugins" => array("integrity-checker/integrity-checker.php")));
+    $ignore = escapeshellarg($ignore);
+    _exec("$wp --path=$path option update integrity-checker_checksum_ignore $ignore --format=json");
+
 }
 
 function _exec($cmd)
