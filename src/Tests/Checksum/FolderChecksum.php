@@ -150,7 +150,7 @@ class FolderChecksum
             $dir,
             \FilesystemIterator::CURRENT_AS_PATHNAME | \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS
         );
-        foreach($iterator AS $file){
+        foreach($iterator AS $file) {
             try {
                 if ($this->fnInArray("$dir/$file", $this->ignore)) {
                     continue;
