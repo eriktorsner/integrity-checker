@@ -15,6 +15,8 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
             $testUrl . '/wp-json/integrity-checker/v1/quota'
         );
 
+        echo "\n";
+        echo $testUrl . '/wp-json/integrity-checker/v1/quota' . "\n";
         print_r($ret);
 
         $this->assertTrue(isset($ret['body']));
