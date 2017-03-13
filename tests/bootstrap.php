@@ -107,7 +107,7 @@ function setUpWp()
     $ignore = json_encode(array("plugins" => array("integrity-checker/integrity-checker.php")));
     $ignore = escapeshellarg($ignore);
     _exec("$wp --path=$path option update integrity-checker_checksum_ignore $ignore --format=json");
-
+    _exec("$wp --path=$path option update wp_checksum_apikey YWIyZGIxZjc6N2QxMzZmNDMyNA==");
 }
 
 function _exec($cmd)
