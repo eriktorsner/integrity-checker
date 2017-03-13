@@ -112,8 +112,8 @@ class Checksum extends BaseTest
 	 */
     public function checkCore($job)
     {
-        require_once ABSPATH.'/wp-admin/includes/update.php';
-        require_once ABSPATH.'/wp-admin/includes/file.php';
+        require_once ABSPATH.'wp-admin/includes/update.php';
+        require_once ABSPATH.'wp-admin/includes/file.php';
         $out = array();
         $checker = new CoreChecker(false);
         $out[] = $checker->check();
@@ -129,7 +129,7 @@ class Checksum extends BaseTest
 	public function checkPlugins($job)
     {
         // ensure the plugins file is loaded from core
-        require_once ABSPATH.'/wp-admin/includes/plugin.php';
+        require_once ABSPATH.'wp-admin/includes/plugin.php';
 
         $plugins = get_plugins();
 	    $this->transientState['plugins'] = array();
@@ -160,7 +160,7 @@ class Checksum extends BaseTest
 	 */
     public function checkPlugin($job)
     {
-	    require_once ABSPATH.'/wp-admin/includes/file.php';
+	    require_once ABSPATH.'wp-admin/includes/file.php';
 
 	    $id = $job->parameters['id'];
 	    $plugin = $job->parameters['plugin'];
@@ -176,12 +176,12 @@ class Checksum extends BaseTest
 	 */
 	public function checkThemes($job)
     {
-        require_once ABSPATH.'/wp-admin/includes/file.php';
+        require_once ABSPATH.'wp-admin/includes/file.php';
         $themes = wp_get_themes();
         $out = array();
         foreach ($themes as $slug => $theme) {
             // Don't attempt to check child themes
-            if ($theme['template'] != $slug) {
+            if ($theme->template != $slug) {
                 continue;
             }
             $checker = new ThemeChecker($this->apiClient, false);
