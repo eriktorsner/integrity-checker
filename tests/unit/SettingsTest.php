@@ -28,6 +28,7 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
             'fileOwners' => array('option' => 'file_owners', 'type' => 'string', 'default' => null),
             'fileGroups' => array('option' => 'file_groups', 'type' => 'string', 'default' => null),
             'maxFileSize' => array('option' => 'max_file_size', 'type' => 'num', 'default' => 2),
+            'checksumIgnore' => array('option' => 'checksum_ignore', 'type' => 'arr', 'default' => array()),
         );
 
         foreach ($settingParameters as $parameter) {
@@ -61,6 +62,7 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
             'fileOwners' => array('a,b,c', ',a',),
             'fileGroups' => array('a,b,c', ',a',),
             'maxFileSize' => array('1M', '10', 10, null),
+            'checksumIgnore' => array(null, array()),
         );
 
         $badCronPatterns = 2;

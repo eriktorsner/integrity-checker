@@ -187,12 +187,17 @@ class ChecksumTest extends \PHPUnit_Framework_TestCase
 
         \WP_Mock::userFunction('get_plugins', array('return' => array(
             'foobar/foobar.php' => array(1,2,3),
+            'ignoreme/ignoreme.php' => array(1,2,3),
+
         )));
 
         $dummy = new \stdClass();
-        $c = new Tests\Checksum($dummy, $dummy, $dummy, $dummy);
-        $c->setBackgroundProcess(new \MockBackgroundProcess());
+        $settings = new \MockSettings();
+        $backgroundProcess = new \MockBackgroundProcess();
+        $c = new Tests\Checksum($settings, $dummy, $dummy, $dummy);
+        $c->setBackgroundProcess($backgroundProcess);
         $c->checkPlugins(new \MockRequest());
+        $this->assertEquals(1, count($backgroundProcess->jobs));
     }
 
     public function testCheckThemes()

@@ -72,6 +72,9 @@ class MockSettings
     public $fileMasks = '0644,0640,0600';
     public $folderMasks = '0755,0750,0700';
     public $maxFileSize = 2097152; //2 MB
+    public $checksumIgnore = array(
+        'plugins' => array('ignoreme/ignoreme.php'),
+    );
 }
 
 class MockState
