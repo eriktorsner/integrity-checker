@@ -234,18 +234,27 @@ class BaseTest
      *
      * @param string $path
      * @param string $pattern
-     * @param int $flags
+     * @param int    $flags
+     * @param array  $links
      *
      * @return array
      */
-    protected function rglob($path='', $pattern='*', $flags = 0)
+    function rglob($path = '', $pattern = '*', $flags = 0, $links = array())
     {
-	    $paths = glob($path.'*', GLOB_MARK|GLOB_ONLYDIR|GLOB_NOSORT);
-	    $files = glob($path.$pattern, $flags);
-	    foreach ($paths as $path) {
-		    $files = array_merge($files, $this->rglob($path, $pattern, $flags));
-	    }
-	    return $files;
+        $paths = glob($path.'*', GLOB_MARK|GLOB_ONLYDIR|GLOB_NOSORT);
+        $files = glob($path.$pattern, $flags);
+        foreach ($paths as $path) {
+            $trimmed = rtrim($path, '/');
+            if (is_link($trimmed)) {
+                $link = readlink($trimmed);
+                if (in_array($link, $links)) {
+                    continue;
+                }
+                $links[] = $link;
+            }
+            $files = array_merge($files, $this->rglob($path, $pattern, $flags, $links));
+        }
+        return $files;
     }
 
     /**
