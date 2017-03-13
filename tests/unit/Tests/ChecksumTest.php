@@ -209,8 +209,8 @@ class ChecksumTest extends \PHPUnit_Framework_TestCase
         file_put_contents(ABSPATH . 'wp-content/themes/mocktheme/foobar.php', '<?php');
 
         \WP_Mock::userFunction('wp_get_themes', array('return' => array(
-            'mocktheme' => array('template' => 'mocktheme', 'Name' => 'Mock', 'Version' => '1.1'),
-            'childtheme' => array('template' => 'mocktheme',),
+            'mocktheme' => (object)array('template' => 'mocktheme', 'Name' => 'Mock', 'Version' => '1.1'),
+            'childtheme' => (object)array('template' => 'mocktheme',),
         )));
 
         \WP_Mock::userFunction('get_theme_root', array(
