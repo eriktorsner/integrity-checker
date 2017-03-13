@@ -7,6 +7,16 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
         setUpWp();
     }
 
+    public function setUp()
+    {
+        $this->tests = array(
+            'checksum',
+            'scanall',
+            'files',
+            'settings',
+        );
+    }
+
     public function testQuota()
     {
         global $testUrl;
@@ -15,10 +25,6 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
             $testUrl . '/wp-json/integrity-checker/v1/quota'
         );
 
-        echo "\n";
-        echo $testUrl . '/wp-json/integrity-checker/v1/quota' . "\n";
-        print_r($ret);
-
         $this->assertTrue(isset($ret['body']));
         $body = $ret['body'];
         $this->assertTrue(isset($body->code));
@@ -26,6 +32,54 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue(isset($body->data));
         $this->assertEquals('ANONYMOUS', $body->data->validationStatus);
 
+    }
+
+    public function testGetProcessStatus()
+    {
+        global $testUrl;
+
+        $ret = $this->restGet(
+            $testUrl . '/wp-json/integrity-checker/v1/process/status'
+        );
+
+        $this->assertTrue(isset($ret['body']));
+        $body = $ret['body'];
+        $this->assertTrue(isset($body->code));
+        $this->assertEquals('success', $body->code);
+        $this->assertTrue(isset($body->data));
+
+        foreach ($this->tests as $testName) {
+            $this->assertTrue(isset($body->data->$testName));
+            $this->assertEquals('never_started', $body->data->$testName->state);
+        }
+
+        foreach ($this->tests as $testName) {
+            $ret = $this->restGet(
+                $testUrl . '/wp-json/integrity-checker/v1/process/status/' . $testName
+            );
+            $body = $ret['body'];
+            $this->assertEquals('success', $body->code);
+            $this->assertTrue(isset($body->data));
+            $this->assertEquals('never_started', $body->data->state);
+        }
+    }
+
+    public function testGetTestResults()
+    {
+        global $testUrl;
+
+        foreach ($this->tests as $testName) {
+            $ret = $this->restGet(
+                $testUrl . '/wp-json/integrity-checker/v1/testresult/' . $testName
+            );
+
+            $this->assertTrue(isset($ret['response']));
+            $response = $ret['response'];
+            $this->assertEquals(200, $response['code']);
+            $this->assertTrue(isset($ret['body']));
+            $body = $ret['body'];
+            $this->assertEquals('success', $body->code);
+        }
     }
 
     private function remotePost($url, $args)
