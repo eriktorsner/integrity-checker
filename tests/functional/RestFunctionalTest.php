@@ -69,9 +69,7 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
         global $testUrl;
 
         foreach ($this->tests as $testName) {
-            $ret = $this->restGet(
-                $testUrl . '/wp-json/integrity-checker/v1/testresult/' . $testName
-            );
+            $ret = $this->restGet($testUrl . '/wp-json/integrity-checker/v1/testresult/' . $testName);
 
             $this->assertTrue(isset($ret['response']));
             $response = $ret['response'];
@@ -82,19 +80,98 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    private function remotePost($url, $args)
+    public function testRunTest()
+    {
+        global $testUrl;
+
+        $tests = array('checksum', 'settings');
+
+        foreach ($tests as $testName) {
+            $ret = $this->restPost(
+                $testUrl . '/wp-json/integrity-checker/v1/process/status/' . $testName,
+                array(
+                    'headers' => array(
+                        'X-HTTP-Method-Override: PUT'
+                    ),
+                    'body' => json_encode((object)array('state' => 'started')),
+                )
+            );
+
+            $this->assertEquals(200, $ret['response']['code']);
+            $body = $ret['body'];
+            // in this test installation, we can assume that the
+            // tests finishes in one single request
+            $this->assertEquals('finished', $body->data->state);
+
+            // Get the results
+            $ret = $this->restGet($testUrl . '/wp-json/integrity-checker/v1/testresult/' . $testName);
+            $body = $ret['body'];
+
+            switch ($testName) {
+                case 'checksum':
+                    $this->assertTrue(isset($body->data->core));
+                    $this->assertTrue(isset($body->data->core->core));
+                    $this->assertTrue(isset($body->data->core->core->name));
+                    $this->assertEquals('Core', $body->data->core->core->name);
+                    $this->assertEquals('core', $body->data->core->core->slug);
+                    $this->assertEquals('checked', $body->data->core->core->status);
+
+                    $this->assertTrue(isset($body->data->plugins));
+                    $this->assertTrue(isset($body->data->plugins->akismet));
+                    $this->assertTrue(isset($body->data->plugins->akismet->name));
+                    $this->assertEquals('Akismet Anti-Spam', $body->data->plugins->akismet->name);
+                    $this->assertEquals('akismet', $body->data->plugins->akismet->slug);
+                    $this->assertEquals('checked', $body->data->plugins->akismet->status);
+
+                    $this->assertTrue(isset($body->data->themes));
+                    $this->assertTrue(isset($body->data->themes->twentysixteen));
+                    $this->assertTrue(isset($body->data->themes->twentysixteen->name));
+                    $this->assertEquals('Twenty Sixteen', $body->data->themes->twentysixteen->name);
+                    break;
+
+                case 'settings':
+                    $this->assertTrue(isset($body->data->checks));
+                    $this->assertTrue(isset($body->data->checks->allowFileEdit));
+                    $this->assertTrue(isset($body->data->checks->dbCredentials));
+                    $this->assertTrue(isset($body->data->checks->allowFileEdit));
+                    $this->assertTrue(isset($body->data->checks->sslLogins));
+                    $this->assertTrue(isset($body->data->checks->checkUpdates));
+                    $this->assertTrue(isset($body->data->checks->directoryIndex));
+                    $this->assertTrue(isset($body->data->checks->checkSalts));
+                    $this->assertTrue(isset($body->data->checks->userEnumeration));
+                    $this->assertTrue(isset($body->data->checks->versionLeak));
+                    $this->assertTrue(isset($body->data->checks->checkTablePrefix));
+                    $this->assertTrue(isset($body->data->checks->adminUsername));
+                    break;
+            }
+        }
+    }
+
+    /***********************************************************/
+
+    private function restPost($url, $args)
     {
         $opts = array('http' =>
                           array(
-                              'method'  => 'POST',
-                              'header'  => 'Content-type: application/x-www-form-urlencoded',
+                              'method'  => 'PUT',
+                              'header'  => 'Content-type: application/json',
                               'content' => isset($args['body'])? $args['body'] : null,
                           )
         );
 
+        if (isset($args['headers'])) {
+            foreach ($args['headers'] as $header) {
+                $opts['http']['header'] .= "\n" . $header;
+            }
+        }
+
         $context  = stream_context_create($opts);
         $content = file_get_contents($url, false, $context);
         $codeParts = explode(' ', $http_response_header[0]);
+
+        if (json_decode($content)) {
+            $content = json_decode($content);
+        }
 
         return array(
             'response' => array(
