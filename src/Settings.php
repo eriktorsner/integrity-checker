@@ -73,6 +73,11 @@ class Settings
     public $slug;
 
     /**
+     * @var array
+     */
+    public $checksumIgnore;
+
+    /**
      * Keep info about getting and setting all parameters (DRY)
      *
      * @var array
@@ -101,6 +106,7 @@ class Settings
             'fileOwners' => array('option' => 'file_owners', 'type' => 'string', 'default' => null),
             'fileGroups' => array('option' => 'file_groups', 'type' => 'string', 'default' => null),
             'maxFileSize' => array('option' => 'max_file_size', 'type' => 'num', 'default' => 2),
+            'checksumIgnore' => array('option' => 'checksum_ignore', 'type' => 'arr', 'default' => array()),
         );
 
         foreach ($this->settingParameters as $name => $par) {
@@ -118,6 +124,8 @@ class Settings
                 case 'num':
                     $this->$name = (double)$value;
                     break;
+                case 'arr':
+                    $this->$name = (array)$value;
             }
         }
     }
