@@ -5,6 +5,9 @@ require_once __DIR__ . '/MockObjects.php';
 
 global $mockRestEndpoints, $testUrl;
 
+// assume we're running under Vagrant:
+$testUrl = 'http://test.devenv.local';
+
 $env = getenv('TEST_ENVIRONMENT');
 define('TEST_ENVIRONMENT', $env ? $env : 'VAGRANT');
 
@@ -46,8 +49,8 @@ function register_rest_route($base, $endPoint, $args)
         array();
 
     $mockRestEndpoints[$base][$endPoint][$method] = $args;
-
 }
+
 
 function setUpWp()
 {
