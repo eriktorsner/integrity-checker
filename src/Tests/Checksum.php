@@ -134,7 +134,15 @@ class Checksum extends BaseTest
         $plugins = get_plugins();
 	    $this->transientState['plugins'] = array();
 
+        $ignoredPlugins = isset($this->settings->checksumIgnore['plugins']) ?
+            $this->settings->checksumIgnore['plugins'] :
+            array();
+
         foreach ($plugins as $id => $plugin) {
+            // Ignore this plugin?
+            if (in_array($id, $ignoredPlugins)) {
+                continue;
+            }
 	        $this->backgroundProcess->addJob((object)array(
 				'class' => $this->name,
 		        'method' => 'checkPlugin',
