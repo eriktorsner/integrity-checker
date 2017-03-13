@@ -239,6 +239,10 @@ class Rest
 		    }
 	    }
 
+	    if (defined('INTEGRITY_CHECKER_NO_REST_AUTH') && INTEGRITY_CHECKER_NO_REST_AUTH) {
+            return true; // @codeCoverageIgnore
+        }
+
         return false;
     }
 
