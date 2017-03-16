@@ -232,8 +232,7 @@ class Files extends BaseTest
         global $wpdb;
         $tableName = $this->getTableName();
 
-
-
+        $files = array();
         foreach (array('MODIFIED', 'DELETED', 'ADDED') as $changeType) {
 
             $result['modifiedfiles'][$changeType] = isset($result['modifiedfiles'][$changeType]) ?
@@ -359,7 +358,7 @@ class Files extends BaseTest
         $tableName = $this->getTableName();
 
         $sql = "SELECT $fields\n" .
-            "FROM wordpress.wp_integrity_checker_files cp\n" .
+            "FROM $tableName cp\n" .
             "WHERE cp.checkpoint=1\n" .
             "AND cp.namehash not in(\n" .
             "  select namehash from wordpress.wp_integrity_checker_files WHERE checkpoint = 0);";
@@ -384,7 +383,7 @@ class Files extends BaseTest
         $tableName = $this->getTableName();
 
         $sql = "SELECT $fields\n" .
-               "FROM wordpress.wp_integrity_checker_files curr\n" .
+               "FROM $tableName curr\n" .
                "WHERE curr.checkpoint=0\n" .
                "AND curr.namehash not in(\n" .
                "  select namehash from wordpress.wp_integrity_checker_files WHERE checkpoint = 1);";
