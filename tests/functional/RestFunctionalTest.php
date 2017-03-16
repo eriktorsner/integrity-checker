@@ -70,6 +70,7 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
 
         foreach ($this->tests as $testName) {
             $ret = $this->restGet($testUrl . '/wp-json/integrity-checker/v1/testresult/' . $testName);
+            print_r($ret);
 
             $this->assertTrue(isset($ret['response']));
             $response = $ret['response'];
