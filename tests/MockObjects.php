@@ -10,7 +10,7 @@ class MockBackgroundProcess
     public function process($yield = false) {}
     public function jobCount() { return 12; }
     public function lastQueuePriority() { return 10; }
-    public function registerCron() { }
+    public function registerActions() { }
 
     public function addJob($job, $priority = 10) {
         $this->jobs[] = $job;

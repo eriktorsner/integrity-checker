@@ -35,9 +35,9 @@ class FilesTest extends \PHPUnit_Framework_TestCase
     public function testAnalyze()
     {
         $t = $this->_testAnalyze(new \MockSettings());
-        $this->assertEquals(6, $t['result']['total']);
-        $this->assertEquals(2, $t['result']['acceptable']);
-        $this->assertEquals(4, $t['result']['unacceptable']);
+        $this->assertEquals(6, $t['result']['permissions']['total']);
+        $this->assertEquals(2, $t['result']['permissions']['acceptable']);
+        $this->assertEquals(4, $t['result']['permissions']['unacceptable']);
 
         $t = $this->_testAnalyze((object)array('fileOwners' => null, 'fileGroups' => false));
     }
@@ -85,12 +85,12 @@ class FilesTest extends \PHPUnit_Framework_TestCase
              ->andReturn(array('www-data'));
 
         $wpdb->shouldReceive('query')
-            ->times(3);
+            ->times(4);
 
         $dummy = new \stdClass();
         $f = new Tests\Files($mockSettings, new \MockState(), $dummy, $dummy);
         $f->setBackgroundProcess(new \MockBackgroundProcess());
-        $f->analyze($dummy);
+        $f->analyzePermissions($dummy);
 
         return $f->transientState;
 

@@ -85,6 +85,7 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
         global $testUrl;
 
         $tests = array('checksum', 'settings');
+        //$tests = array('settings');
 
         foreach ($tests as $testName) {
             $ret = $this->restPost(
@@ -99,9 +100,24 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
 
             $this->assertEquals(200, $ret['response']['code']);
             $body = $ret['body'];
-            // in this test installation, we can assume that the
-            // tests finishes in one single request
-            $this->assertEquals('finished', $body->data->state);
+            // since v 0.10, tests are always run in a separate
+            // request. So this test can't be finished yet
+            $this->assertEquals('started', $body->data->state);
+
+            // ...so we have to wait for the test to finish
+            $i = 0;
+            while (true) {
+                $i++;
+                $ret = $this->restGet($testUrl . '/wp-json/integrity-checker/v1/process/status/' . $testName);
+                $body = $ret['body'];
+                if ($body->data->state == 'finished') {
+                    break;
+                }
+                if ($i > 10) {
+                    break;
+                }
+                sleep(1);
+            }
 
             // Get the results
             $ret = $this->restGet($testUrl . '/wp-json/integrity-checker/v1/testresult/' . $testName);

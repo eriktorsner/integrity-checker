@@ -58,11 +58,6 @@ class BaseTestTest extends \PHPUnit_Framework_TestCase
     public function testFinish()
     {
         \WP_Mock::userFunction('delete_transient', array(
-            'args' => array('tt_teststarted_abc123'),
-            'return' => null,
-            'times' => 1,
-        ));
-        \WP_Mock::userFunction('delete_transient', array(
             'args' => array('tt_teststate_abc123'),
             'return' => null,
             'times' => 1,

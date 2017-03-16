@@ -79,7 +79,7 @@ class BackgroundProcessTest extends \PHPUnit_Framework_TestCase
         \WP_Mock::expectActionAdded('tt_bgprocess_cron', array($bg, 'handleCronHealthCheck'));
         \WP_Mock::expectFilterAdded('cron_schedules', array($bg, 'scheduleCronHealthCheck'));
 
-        $bg->registerCron();
+        $bg->registerActions();
 
     }
 
@@ -198,14 +198,14 @@ class BackgroundProcessTest extends \PHPUnit_Framework_TestCase
             'return' => time(),
             'times' => 1,
         ));
-        \WP_Mock::userFunction('get_rest_url', array(
+        /*\WP_Mock::userFunction('get_rest_url', array(
             'return' => 'http://example.com/wp-json',
             'times' => 1,
         ));
         \WP_Mock::userFunction('wp_remote_get', array(
             'return' => true,
             'times' => 1,
-        ));
+        ));*/
 
         $testFactory = new \MockTestFactory();
         $bg = new BackgroundProcess($testFactory);
@@ -247,6 +247,15 @@ class BackgroundProcessTest extends \PHPUnit_Framework_TestCase
     {
         $testFactory = new \MockTestFactory();
         $bg = new BackgroundProcess($testFactory);
+
+        \WP_Mock::userFunction('get_rest_url', array(
+            'return' => 'http://example.com/wp-json',
+        ));
+
+        \WP_Mock::userFunction('wp_remote_get', array(
+            'return' => true,
+        ));
+
         $ret = $bg->scheduleCronHealthCheck(array());
         $this->assertEquals(1, count($ret));
         $this->assertEquals($ret['tt_bgprocess_cron_interval']['interval'], 300);
