@@ -7,8 +7,8 @@
         <?php _e('You can be stricter, but if you are too strict you might lose the ability to upgrade WordPress which is a security risk in itself.', 'integrity-checker');?>
         <?php _e('You can change your preferred permission and owner/group settings on the Settings tab.', 'integrity-checker');?>
         <a href="tools.php?page=integrity-checker_options&tab=tab-settings"><?php _e('Go to Settings', 'integrity-checker');?></a>
-
     </p>
+
     <div class="scan-results-item">
         <table>
             <tr>
@@ -38,42 +38,17 @@
 
         </table>
 
-        <# if (data.files.length> 0) { #>
-            <a class="itemIssuesToggle" data-slug="permissions-issues">Show issues</a>
-            <# } #>
-                <br>
 
-                <table id="scan-plugins-permissions-issues" class="scan-result" style="display: none;">
-                    <thead>
-                    <tr>
-                        <td style="width: 50%;">Name</td>
-                        <td>Type</td>
-                        <td>Mode</td>
-                        <td>Owner/Group</td>
-                        <td>Modified</td>
-                        <td>Size</td>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <# for (var index in data.files) { #>
-                        <# var file = data.files[index];  #>
-                            <# var icon = file.isDir == "1" ? 'fa-folder-o':'fa-file-o'; #>
-                                <tr>
-                                    <td style="width: 50%;">
-                                        <i class="fa {{{icon}}}" aria-hidden="true"></i>
-                                        <span class="item-filename">{{{file.file}}}</span>
-                                        <br>
-                                        <strong>{{{file.reason}}}</strong>
-                                    </td>
-                                    <td><span class="item-type">{{{file.isDir == "1" ? 'Folder':'File'}}}</span></td>
-                                    <td><span class="item-status">{{{file.mode}}}</span></td>
-                                    <td><span class="item-status">{{{file.owner}}} / {{{file.group}}} </span></td>
-                                    <td><span class="item-filename">{{{file.date}}}</span></td>
-                                    <td><span class="item-filename">{{{humanFileSize(file.size)}}}</span></td>
-                                </tr>
-                                <#}#>
-                    </tbody>
-                </table>
-                <hr>
+        <# if (data.unacceptable > 0) { #>
+            <a class="itemIssuesToggle" data-slug="permissions-issues">Show issues</a>
+        <# } #>
+
+         <div id="scan-plugins-permissions-issues" style="display: none;">
+             <table id="table-plugins-permissions-issues" width="100%" class="display" ></table>
+         </div>
+
+        <br>
+        <hr>
+
     </div>
 </script>
