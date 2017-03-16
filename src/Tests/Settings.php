@@ -46,7 +46,6 @@ class Settings extends BaseTest
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'shapeResult'), 20);
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'finish'), 99);
 
-        $this->backgroundProcess->process();
     }
 
 	/**
