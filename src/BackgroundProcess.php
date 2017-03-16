@@ -75,6 +75,9 @@ class BackgroundProcess
         }
     }
 
+    /**
+     * Regsiter WordPress REST endpoints
+     */
     public function registerRestEndPoints()
     {
         $rest = $this;
@@ -117,10 +120,17 @@ class BackgroundProcess
 	/**
 	 * Make sure we catch stalled or failed processes via cron
 	 */
-	public function registerCron()
+	public function registerActions()
 	{
+        // Add our shutdown handler
+        add_action( 'shutdown', array($this, 'onShutdown'));
+
+        // Hook into cron
 		add_action($this->cronHookIdentifier, array($this, 'handleCronHealthCheck'));
 		add_filter('cron_schedules', array($this, 'scheduleCronHealthCheck'));
+
+        // register Rest endpoints when needed
+        add_action('rest_api_init', array($this, 'registerRestEndpoints'));
 	}
 
 
@@ -131,7 +141,7 @@ class BackgroundProcess
      * @param bool $yield Don't process any queued jobs, just fire next REST call
      *
      */
-	public function process($yield = false)
+	public function process()
 	{
 		if ($this->isRunning()) {
 			return;
@@ -139,42 +149,51 @@ class BackgroundProcess
 
         $queueTransientName = $this->transientName('queue');
         $jobs = $this->getQueue($queueTransientName);
-		if (!$yield) {
-            $lockTransientName = $this->transientName('lock');
-            set_transient($lockTransientName, time());
 
-            // Make sure there's a cron job scheduled to check
-            // the overall health every 5 minutes
-            $this->ensureScheduled();
+        $lockTransientName = $this->transientName('lock');
+        set_transient($lockTransientName, time());
 
-            $this->startTime = time();
-            $obj             = null;
+        // Make sure there's a cron job scheduled to check
+        // the overall health every 5 minutes
+        $this->ensureScheduled();
 
+        $this->startTime = time();
+        $obj             = null;
+
+        $done = (count($jobs) == 0 || $this->timeExceeded() || $this->memoryExceeded());
+        while ( ! $done) {
+
+            $job = array_shift($jobs);
+            set_transient($queueTransientName, $jobs);
+
+            $obj = $this->dispatch($job);
+
+            $jobs = $this->getQueue($queueTransientName);
+
+            // check for empty queue, time or memory constraints
             $done = (count($jobs) == 0 || $this->timeExceeded() || $this->memoryExceeded());
-            while ( ! $done) {
-
-                $job = array_shift($jobs);
-                set_transient($queueTransientName, $jobs);
-
-                $obj = $this->dispatch($job);
-
-                $jobs = $this->getQueue($queueTransientName);
-
-                // check for empty queue, time or memory constraints
-                $done = (count($jobs) == 0 || $this->timeExceeded() || $this->memoryExceeded());
-            }
-
-            $this->doneRunning($obj);
         }
 
-		if (count($jobs) > 0) {
-			$this->newRequest();
-		}
+        $this->doneRunning($obj);
 
 		if (count($jobs) == 0) {
 			delete_transient($queueTransientName);
 		}
 	}
+
+    /**
+     * When the WordPress request is all but done. We'll check
+     * for jobs to process in a new request
+     */
+	public function onShutdown()
+    {
+        $queueTransientName = $this->transientName('queue');
+        $jobs = $this->getQueue($queueTransientName);
+
+        if (count($jobs) > 0) {
+            $this->newRequest();
+        }
+    }
 
 	/**
 	 * Launch a new async request
