@@ -164,6 +164,7 @@ class BaseTest
      */
     public function start($request)
     {
+        $this->session = $this->backgroundProcess->session;
         $this->started = time();
         $this->stateString = 'started';
         $payload = json_decode($request->get_body());
@@ -192,7 +193,6 @@ class BaseTest
         $this->transientState = false;
 
         delete_transient('tt_teststate_' . $this->session);
-	    delete_transient('tt_teststarted_' . $this->session);
 
         do_action("{$this->settings->slug}_test_finished", $this->name, $this->state());
 
@@ -215,6 +215,7 @@ class BaseTest
 
 	    if ($ret->finished === 0) {
             $ret->jobCount = $this->backgroundProcess->jobCount();
+            $ret->session = $this->session;
 	    }
 
 	    return $ret;
