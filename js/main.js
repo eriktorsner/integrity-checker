@@ -1,5 +1,4 @@
 jQuery(document).ready(function($) {
-
     /**
      * Wrapper for REST calls
      *
@@ -319,9 +318,46 @@ jQuery(document).ready(function($) {
 
         getRest('/integrity-checker/v1/testresult/files' + '?esc=1', function (data) {
             scanPermResults.html('');
-            if (data.data) {
+            scanMonitorResults.html('');
+
+            if (data.data.permissions) {
+
                 var issuesTmpl = wp.template('filesMaskOwnerIssuesTmpl');
-                $('<div></div>').html(issuesTmpl(data.data)).appendTo(scanPermResults);
+                $('<div></div>').html(issuesTmpl(data.data.permissions)).appendTo(scanPermResults);
+
+                var fileScanPermissionsData = data.data.permissions.files;
+                $('#table-plugins-permissions-issues').DataTable({
+                    data: fileScanPermissionsData,
+                    columns: [
+                        {title: 'File', data: 'file'},
+                        {title: 'Type', data: 'type'},
+                        {title: 'Mode', data: 'mode'},
+                        {title: 'Owner', data: 'owner'},
+                        {title: 'Group', data: 'group'},
+                        {title: 'Date', data: 'date'},
+                        {title: 'Size', data: 'size'},
+                        {title: 'Issue', data: 'issue'}
+                    ]
+                });
+
+                var issuesTmpl = wp.template('filesMonitorIssuesTmpl');
+                $('<div></div>').html(issuesTmpl(data.data.modifiedfiles)).appendTo(scanMonitorResults);
+
+                var fileScanFileMonitorData = data.data.modifiedfiles.files;
+                $('#table-plugins-filemonitor-issues').DataTable({
+                    data: fileScanFileMonitorData,
+                    columns: [
+                        {title: 'File', data: 'file'},
+                        {title: 'Type', data: 'type'},
+                        {title: 'Mode', data: 'mode'},
+                        {title: 'Owner', data: 'owner'},
+                        {title: 'Group', data: 'group'},
+                        {title: 'Date', data: 'date'},
+                        {title: 'Size', data: 'size'},
+                        {title: 'Change', data: 'issue'}
+                    ]
+                });
+
             }
         });
     }
@@ -507,8 +543,9 @@ jQuery(document).ready(function($) {
 /*
  * Utils - global name space
  */
-
 var rest, getRest, putRest, postRest;
+var fileScanPermissionsData, fileScanModifiedFilesData;
+
 
 /**
  * Convert bytes to a human readable form
