@@ -38,7 +38,6 @@ class ScanAll extends BaseTest
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'analyze'), 20);
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'finish'), 99);
 
-        $this->backgroundProcess->process(true);
     }
 
     /**
