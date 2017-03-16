@@ -100,6 +100,14 @@ class AdminPage {
             true
         );
 
+        wp_enqueue_script(
+            $this->settings->slug . '-jquery-datatables',
+            plugins_url() . '/' . $this->settings->slug . '/js/jquery.dataTables.min.js',
+            array('jquery'),
+            INTEGRITY_CHECKER_VERSION,
+            true
+        );
+
         wp_localize_script(
             $this->settings->slug . '-main',
             'integrityCheckerApi',
@@ -135,6 +143,13 @@ class AdminPage {
         wp_enqueue_style(
             $this->settings->slug . '-fa',
             plugins_url() . '/' . $this->settings->slug . '/css/font-awesome.min.css',
+            array(),
+            INTEGRITY_CHECKER_VERSION
+        );
+
+        wp_enqueue_style(
+            $this->settings->slug . '-jquery-datatables',
+            plugins_url() . '/' . $this->settings->slug . '/css/jquery.dataTables.min.css',
             array(),
             INTEGRITY_CHECKER_VERSION
         );
