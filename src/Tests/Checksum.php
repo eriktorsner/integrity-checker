@@ -37,8 +37,6 @@ class Checksum extends BaseTest
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'analyze'), $offset +20);
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'finish'), $offset +99);
 
-        $this->backgroundProcess->process();
-
     }
 
     /**
