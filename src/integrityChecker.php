@@ -126,10 +126,9 @@ class integrityChecker
 
         // Load the REST endpoints
         add_action('rest_api_init', array($this->rest, 'registerRestEndpoints'));
-        add_action('rest_api_init', array($this->backgroundProcess, 'registerRestEndpoints'));
 
-	    // Hook up Background processes to cron
-        $this->backgroundProcess->registerCron();
+	    // Let the background procecor hook itself up
+        $this->backgroundProcess->registerActions();
 
         // Reuse the 5-min interval defined in bgProcess and make sure it's scheduled
         $this->cronInvervalName = $this->backgroundProcess->cronIntervalIdentifier;
@@ -317,6 +316,7 @@ class integrityChecker
         if (count($scheduledRun->remainingTests) == 0) {
             $this->finishedScheduledScans($scheduledRun);
         }
+
     }
 
     private function startScheudledRestProcess($process, $schedulerSession)
