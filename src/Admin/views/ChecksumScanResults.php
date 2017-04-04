@@ -27,7 +27,9 @@
     </div>
 
     <p>
-        <?php _e('This tool detects changes in individual files in WordPress core, themes and plugins.', 'integrity-checker');?>
+        <?php _e('Scan to detect changes in individual files in WordPress core, themes and plugins compared to ' .
+                 'what each file looked like when first installed.',
+            'integrity-checker');?>
     </p>
     <p>
         <?php _e("A modified or added file may indicate that the site has been hacked or compromised,", 'integrity-checker');?>

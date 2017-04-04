@@ -114,6 +114,7 @@ class AdminPage {
             array(
                 'url'    => esc_url_raw(rtrim(rest_url(), '/')),
                 'nonce' => wp_create_nonce('wp_rest'),
+                'access' => $this->settings->userLevel(),
             )
         );
 

@@ -80,20 +80,30 @@ $strDiagnostic = $diagnostic->get();
 <script type="text/html" id="tmpl-quotaTmpl">
 <table class="quotainfo">
 	<tr>
-		<td>Rate limit</td>
-		<td>{{{ data.limit}}} requests/h</td>
+		<td>Request rate limit</td>
+		<td>{{{data.rateLimit}}}</td>
 	</tr>
 	<tr>
 		<td>Current usage</td>
-		<td>{{{ data.current}}} requests</td>
+		<td>{{{data.currentUsage}}}</td>
 	</tr>
 	<tr>
 		<td>Reset in</td>
-		<td>{{{ data.resetIn }}} s</td>
+		<td>{{{data.resetIn }}}</td>
 	</tr>
 	<tr>
-		<td>Key type</td>
-		<td>{{{ data.validationStatus }}}</td>
+		<td>Max connected sites</td>
+		<td>{{{data.siteLimit }}}</td>
+	</tr>
+	<tr>
+		<td>Current connected sites</td>
+		<td>{{{data.connectedSites }}}</td>
+	</tr>
+
+
+	<tr>
+		<td>Access type</td>
+		<td>{{{data.access }}}</td>
 	</tr>
     <tr>
         <td>Email</td>

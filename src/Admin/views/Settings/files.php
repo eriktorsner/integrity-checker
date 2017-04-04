@@ -1,3 +1,12 @@
+<?php
+$intervals = array(
+    'Week' => '1 week',
+    'Month' => '1 month',
+    '3 Months' => '3 month',
+    'Year' => '1 year'
+);
+?>
+
 <h3><?php _e('File scanner','integrity-checker')?></h3>
 <div id="filesSettings" class="files-settings"></div>
 
@@ -19,6 +28,19 @@
                 </i>
             </td>
         </tr>
+        <tr>
+            <th><?php _e('Follow symlinks', 'integrity-checker');?></th>
+            <td>
+                <input type="checkbox" name="followSymlinks" value="1"
+                    <?php echo $this->settings->enableAlerts?'checked':'';?>>
+                <br>
+                <i>
+                    <?php _e('Should the file scanner follow symlinks?. ', 'integrity-checker')?>
+                </i>
+            </td>
+
+        </tr>
+
 
         <tr>
             <th><?php _e('File permission modes', 'integrity-checker');?></th>
@@ -87,7 +109,7 @@
         <tr>
             <th></th>
             <td>
-                <a class="button-primary saveFileSettings">
+                <a class="button-primary saveFileSettings access-registered access-paid">
                     <?php _e('Save file scanner settings', 'integrity-checker')?>
                 </a>
                 <span class="saveFileSettingsFail" style="display: none">

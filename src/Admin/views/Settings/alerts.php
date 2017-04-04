@@ -1,5 +1,7 @@
-<h3><?php _e('Alerts','integrity-checker')?></h3>
-<div id="alertSettings" class="alert-settings"></div>
+<div id="alertSettingsWrapper" class="access-registered access-paid">
+    <h3><?php _e('Alerts','integrity-checker')?></h3>
+    <div id="alertSettings" class="alert-settings"></div>
+</div>
 
 <script type="text/html" id="tmpl-alertsTmpl">
     <table class="form-table">
