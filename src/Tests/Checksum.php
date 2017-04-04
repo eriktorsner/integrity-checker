@@ -141,6 +141,7 @@ class Checksum extends BaseTest
             if (in_array($id, $ignoredPlugins)) {
                 continue;
             }
+
 	        $this->backgroundProcess->addJob((object)array(
 				'class' => $this->name,
 		        'method' => 'checkPlugin',
@@ -163,7 +164,7 @@ class Checksum extends BaseTest
 	    $id = $job->parameters['id'];
 	    $plugin = $job->parameters['plugin'];
 
-	    $checker = new PluginChecker($this->apiClient, false);
+	    $checker = new PluginChecker($this->apiClient);
 	    $this->transientState['plugins'][] = $checker->check($id, $plugin);
     }
 
@@ -182,7 +183,7 @@ class Checksum extends BaseTest
             if ($theme->template != $slug) {
                 continue;
             }
-            $checker = new ThemeChecker($this->apiClient, false);
+            $checker = new ThemeChecker($this->apiClient);
             $out[] = $checker->check($slug, $theme);
         }
 

@@ -12,10 +12,9 @@ class PluginChecker extends BaseChecker
      * PluginChecker constructor.
      *
      * @param object $apiClient
-     * @param bool   $localCache
      *
      */
-    public function __construct($apiClient, $localCache = false)
+    public function __construct($apiClient)
     {
         $this->basePath = WP_PLUGIN_DIR;
 
@@ -23,7 +22,7 @@ class PluginChecker extends BaseChecker
 			'readme.txt' => '*',
 		);
 
-        parent::__construct($apiClient, $localCache);
+        parent::__construct($apiClient);
     }
 
     /**

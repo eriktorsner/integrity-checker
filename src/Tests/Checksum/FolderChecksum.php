@@ -40,6 +40,13 @@ class FolderChecksum
     public $maxFileSize = 20971520;
 
     /**
+     * Should the file scan follow symbolic links or not
+     *
+     * @var bool
+     */
+    public $followSymlinks = true;
+
+    /**
      * Path to scan
      *
      * @var string
@@ -163,6 +170,10 @@ class FolderChecksum
 
                 if ($this->includeFolderInfo) {
                     $out .= $this->fileInfo2String($file, $base) . "\n";
+                }
+
+                if (is_link($file) && !$this->followSymlinks) {
+                    continue;
                 }
 
                 if ($this->recursive) {

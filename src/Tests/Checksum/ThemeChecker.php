@@ -12,9 +12,8 @@ class ThemeChecker extends BaseChecker
      * ThemeChecker constructor.
      *
      * @param \integrityChecker\APIClient $apiClient
-     * @param bool              $localCache
      */
-    public function __construct($apiClient, $localCache = false)
+    public function __construct($apiClient)
     {
         $this->basePath = get_theme_root();
 
@@ -22,7 +21,7 @@ class ThemeChecker extends BaseChecker
 		    'readme.txt' => '*',
 	    );
 
-        parent::__construct($apiClient, $localCache);
+        parent::__construct($apiClient);
     }
 
     /**

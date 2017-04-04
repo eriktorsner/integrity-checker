@@ -12,12 +12,6 @@ class BaseChecker
     protected $basePath = '';
 
     /**
-     * Use a local file cache of the backend API
-     * @var bool
-     */
-    protected $localCache = false;
-
-    /**
      * @var array
      */
     protected $softIssues = array();
@@ -32,12 +26,10 @@ class BaseChecker
      * BaseChecker constructor.
      *
      * @param object $apiClient
-     * @param bool   $localCache
      */
-    public function __construct($apiClient, $localCache = false)
+    public function __construct($apiClient)
     {
         $this->apiClient = $apiClient;
-        $this->localCache = $localCache;
     }
 
     /**
@@ -49,6 +41,8 @@ class BaseChecker
     public function getLocalChecksums($path)
     {
         $checkSummer = new FolderChecksum($path);
+        // Symlinks inside plugins and themes make no sense
+        $checkSummer->followSymlinks = false;
         $out = $checkSummer->scan();
 
         return $out;
@@ -66,31 +60,13 @@ class BaseChecker
     public function getOriginalChecksums($type, $slug, $version)
     {
         $key = sprintf('wpchecksum_%s_%s_%s', $type, $slug, $version);
-        if ($hit = get_transient($key)) {
+        $hit = get_transient($key);
+
+        if ($hit !== false) {
             return $hit;
         }
 
-        $out = null;
-
-        if ($this->localCache) {
-            switch ($type) {
-                case 'plugin':
-                    $localTemplate = self::PLUGIN_URL_TEMPLATE;
-                    break;
-                case 'theme':
-                    $localTemplate = self::THEME_URL_TEMPLATE;
-                    break;
-            }
-
-            $url = sprintf($localTemplate, $slug, $version);
-            $ret = $this->downloadZip($url);
-            if ($ret) {
-                $path = $ret . "/$slug";
-                $out = $this->getLocalChecksums($path);
-            }
-        } else {
-            $out = $this->apiClient->getChecksums($type, $slug, $version);
-        }
+        $out = $this->apiClient->getChecksums($type, $slug, $version);
 
         set_transient($key, $out, HOUR_IN_SECONDS);
         return $out;
@@ -168,31 +144,4 @@ class BaseChecker
 	    return false;
     }
 
-    /**
-     * Download and unpack zip file
-     *
-     * @param $url
-     * @return null|string
-     */
-    private function downloadZip($url)
-    {
-        $response = wp_remote_get($url);
-        if ($response['response']['code'] != 200) {
-            return null;
-        }
-
-        $fileName = wp_tempnam();
-        file_put_contents($fileName, $response['body']);
-
-        $folderName = $fileName . '.extracted';
-        @mkdir($folderName, 0777, true);
-        $zip = new \ZipArchive;
-        $zip->open($fileName);
-        $zip->extractTo($folderName);
-        $zip->close();
-        unlink($fileName);
-
-        return $folderName;
-
-    }
 }
