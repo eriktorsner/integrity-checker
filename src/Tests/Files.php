@@ -93,7 +93,10 @@ class Files extends BaseTest
 
         while (!$done) {
             $done = true; // Assume this is the last run
-            $sql = "select * from $tableName WHERE checkpoint=0 LIMIT $offset, $chunk";
+            $sql = "select f.* FROM wp_integrity_checker_files f " .
+                "LEFT OUTER JOIN wp_integrity_checker_files l ON f.name = l.name AND f.version < l.version " .
+                "WHERE l.id IS NULL " .
+                "LIMIT $offset, $chunk";
             $rows = $wpdb->get_results($sql);
             $updates = array();
 
@@ -140,9 +143,13 @@ class Files extends BaseTest
     public function analyzeModifiedFiles($job)
     {
         global $wpdb;
-        $modified = $wpdb->get_col($this->getModifiedFilesSQL(true));
-        $deleted = $wpdb->get_col($this->getDeletedFilesSQL(true));
-        $added = $wpdb->get_col($this->getNewFilesSQL(true));
+
+        $tableName = $this->getTableName();
+        $firstScan = $wpdb->get_var("select min(found) from $tableName");
+
+        $modified = $wpdb->get_col($wpdb->prepare($this->getModifiedFilesSQL(true), array($firstScan)));
+        $deleted = $wpdb->get_col($wpdb->prepare($this->getDeletedFilesSQL(true), array($firstScan)));
+        $added = $wpdb->get_col($wpdb->prepare($this->getNewFilesSQL(true), array($firstScan)));
 
         $this->transientState['result']['modifiedfiles'] = array(
             'MODIFIED' => $modified[0],
@@ -177,7 +184,11 @@ class Files extends BaseTest
         global $wpdb;
         $tableName = $this->getTableName();
 
-        $sql = "select * from $tableName WHERE checkpoint=0 AND permissionsresult != 0";
+        $sql = "select f.*, l.id \n" .
+            "FROM wp_integrity_checker_files f \n" .
+            "  LEFT OUTER JOIN wp_integrity_checker_files l ON f.name = l.name AND f.version < l.version \n" .
+            "WHERE l.id IS NULL AND l.deleted IS NULL;";
+
         $rows = $wpdb->get_results($sql);
         $files = array();
 
@@ -196,7 +207,7 @@ class Files extends BaseTest
                 'file'   => $row->name,
                 'type'   => $row->isdir ? 'Folder' : 'File',
                 'isDir'  => $row->isdir,
-                'mode'   => '0' . $row->mask,
+                'mode'   => '0' . $row->mode,
                 'owner'  => $row->fileowner,
                 'group'  => $row->filegroup,
                 'date'   => date('Y-m-d H:i:s', $row->modified),
@@ -231,25 +242,33 @@ class Files extends BaseTest
     {
         global $wpdb;
         $tableName = $this->getTableName();
+        $firstScan = $wpdb->get_var("select min(found) from $tableName");
+
 
         $files = array();
         foreach (array('MODIFIED', 'DELETED', 'ADDED') as $changeType) {
 
-            $result['modifiedfiles'][$changeType] = isset($result['modifiedfiles'][$changeType]) ?
-                (int)$result['modifiedfiles'][$changeType] :
-                0;
-
             switch ($changeType) {
                 case 'MODIFIED':
-                    $rows = $wpdb->get_results($this->getModifiedFilesSQL(false));
+                    $rows = $wpdb->get_results($wpdb->prepare(
+                        $this->getModifiedFilesSQL(false),
+                        array($firstScan)
+                    ));
                     break;
                 case 'DELETED':
-                    $rows = $wpdb->get_results($this->getDeletedFilesSQL(false));
+                    $rows = $wpdb->get_results($wpdb->prepare(
+                        $this->getDeletedFilesSQL(false),
+                        array($firstScan)
+                    ));
                     break;
                 case 'ADDED':
-                    $wpdb->get_results($this->getNewFilesSQL(false));
+                    $rows = $wpdb->get_results($wpdb->prepare(
+                        $this->getNewFilesSQL(false),
+                        array($firstScan)
+                    ));
                     break;
             }
+            $result['modifiedfiles'][$changeType] = count($rows);
 
             foreach ($rows as $row) {
 
@@ -257,7 +276,7 @@ class Files extends BaseTest
                     'file'   => $row->name,
                     'type'   => $row->isdir ? 'Folder' : 'File',
                     'isDir'  => $row->isdir,
-                    'mode'   => '0' . $row->mask,
+                    'mode'   => '0' . $row->mode,
                     'owner'  => $row->fileowner,
                     'group'  => $row->filegroup,
                     'date'   => date('Y-m-d H:i:s', $row->modified),
@@ -277,6 +296,8 @@ class Files extends BaseTest
             return strcasecmp($aa, $bb);
         });
 
+        $result['modifiedfiles']['checkpoint'] = $firstScan;
+        $result['modifiedfiles']['checkpointIso'] = date('Y-m-d H:i:s', $firstScan);
         $result['modifiedfiles']['files'] = $files;
 
         return $result;
@@ -293,11 +314,12 @@ class Files extends BaseTest
     private function analyzePermissionForFile($row, $acceptableOwnerGroup)
     {
         $permissionsOk = in_array(
-            '0' . $row->mask,
+            '0' . $row->mode,
             $row->isdir ?
                 explode(',', $this->settings->folderMasks) :
                 explode(',', $this->settings->fileMasks)
         );
+
         $ownerOk = in_array($row->fileowner, $acceptableOwnerGroup->owner);
         $groupOk = in_array($row->filegroup, $acceptableOwnerGroup->group);
 
@@ -329,14 +351,14 @@ class Files extends BaseTest
     {
         $fields = $count ?
             "count(*)" :
-            "cu.id, cu.name, cu.modified, cu.mask, cu.fileowner, cu.filegroup, cu.isdir, cu.size";
+            "f.id, f.name, f.modified, f.mode, f.fileowner, f.filegroup, f.isdir, f.size";
 
         $tableName = $this->getTableName();
         $sql = "SELECT $fields \n" .
-                "FROM {$tableName} cp\n" .
-                "LEFT OUTER JOIN {$tableName} cu\n" .
-                "  ON (cu.namehash = cp.namehash AND cu.checkpoint=0 AND cp.checkpoint=1)\n" .
-                "WHERE cu.hash != cp.hash;";
+                "FROM {$tableName} f\n" .
+                "LEFT OUTER JOIN {$tableName} l\n" .
+                "  ON (f.name = l.name AND f.version < l.version)\n" .
+                "WHERE l.id IS NULL AND f.deleted IS NULL AND f.version > 1 AND f.found > %d;";
 
         return $sql;
     }
@@ -353,15 +375,15 @@ class Files extends BaseTest
     {
         $fields = $count ?
             "count(*)" :
-            "cp.id, cp.name, cp.modified, cp.mask, cp.fileowner, cp.filegroup, cp.isdir, cp.size";
+            "f.id, f.name, f.modified, f.mode, f.fileowner, f.filegroup, f.isdir, f.size";
 
         $tableName = $this->getTableName();
 
-        $sql = "SELECT $fields\n" .
-            "FROM $tableName cp\n" .
-            "WHERE cp.checkpoint=1\n" .
-            "AND cp.namehash not in(\n" .
-            "  select namehash from wordpress.wp_integrity_checker_files WHERE checkpoint = 0);";
+        $sql = "SELECT $fields \n" .
+               "FROM {$tableName} f\n" .
+               "LEFT OUTER JOIN {$tableName} l\n" .
+               "  ON (f.name = l.name AND f.version < l.version)\n" .
+               "WHERE l.id IS NULL AND f.deleted IS NOT NULL;";
 
         return $sql;
     }
@@ -378,15 +400,15 @@ class Files extends BaseTest
     {
         $fields = $count ?
             "count(*)" :
-            "curr.id, curr.name, curr.modified, curr.isdir, curr.islink, curr.size";
+            "f.id, f.name, f.modified, f.mode, f.fileowner, f.filegroup, f.isdir, f.size";
 
         $tableName = $this->getTableName();
 
-        $sql = "SELECT $fields\n" .
-               "FROM $tableName curr\n" .
-               "WHERE curr.checkpoint=0\n" .
-               "AND curr.namehash not in(\n" .
-               "  select namehash from wordpress.wp_integrity_checker_files WHERE checkpoint = 1);";
+        $sql = "SELECT $fields \n" .
+               "FROM {$tableName} f\n" .
+               "LEFT OUTER JOIN {$tableName} l\n" .
+               "  ON (f.name = l.name AND f.version < l.version)\n" .
+               "WHERE l.id IS NULL AND f.deleted IS NULL AND f.version = 1 AND f.found > %d;";
 
         return $sql;
     }
