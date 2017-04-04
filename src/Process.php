@@ -129,6 +129,32 @@ class Process
 
     }
 
+    /**
+     * Get the latest result of a test
+     *
+     * @param $name
+     * @param $operation
+     * @param $data
+     *
+     * @return mixed|void|\WP_Error
+     */
+    public function changeTestResults($name, $operation, $data)
+    {
+        if (is_null($name) || !$this->testFactory->hasTest($name)) {
+            return new \WP_Error('fail', 'Unknown test name', array('status' => 404));
+        }
+
+        $ret = new \WP_Error('fail', 'Unknown operation name', array('status' => 404));
+
+        $objTest = $this->testFactory->getTestObject($name);
+        if (method_exists($objTest, $operation)) {
+            $ret = $objTest->$operation($data);
+        }
+
+        return $ret;
+
+    }
+
 
 
 
