@@ -6,66 +6,6 @@ use integrityChecker\Cron\CronExpression;
 class Settings
 {
     /**
-     * @var string
-     */
-    public $cron;
-
-    /**
-     * @var int
-     */
-    public $enableScheduleScans;
-
-    /**
-     * @var int
-     */
-    public $scheduleScanChecksums;
-
-    /**
-     * @var int
-     */
-    public $scheduleScanPermissions;
-
-    /**
-     * @var int
-     */
-    public $scheduleScanSettings;
-
-    /**
-     * @var int
-     */
-    public $enableAlerts;
-
-    /**
-     * @var string
-     */
-    public $alertsEmails;
-
-    /**
-     * @var string
-     */
-    public $fileMasks;
-
-    /**
-     * @var string
-     */
-    public $folderMasks;
-
-    /**
-     * @var int
-     */
-    public $maxFileSize;
-
-    /**
-     * @var string
-     */
-    public $fileOwners;
-
-    /**
-     * @var string
-     */
-    public $fileGroups;
-
-    /**
      * The plugin slug
      *
      * @var string
@@ -73,9 +13,74 @@ class Settings
     public $slug;
 
     /**
+     * @var string
+     */
+    private $cron;
+
+    /**
+     * @var int
+     */
+    private $enableScheduleScans;
+
+    /**
+     * @var int
+     */
+    private $scheduleScanChecksums;
+
+    /**
+     * @var int
+     */
+    private $scheduleScanPermissions;
+
+    /**
+     * @var int
+     */
+    private $scheduleScanSettings;
+
+    /**
+     * @var int
+     */
+    private $enableAlerts;
+
+    /**
+     * @var string
+     */
+    private $alertsEmails;
+
+    /**
+     * @var string
+     */
+    private $fileMasks;
+
+    /**
+     * @var string
+     */
+    private $folderMasks;
+
+    /**
+     * @var int
+     */
+    private $maxFileSize;
+
+    /**
+     * @var int
+     */
+    private $followSymlinks;
+
+    /**
+     * @var string
+     */
+    private $fileOwners;
+
+    /**
+     * @var string
+     */
+    private $fileGroups;
+
+    /**
      * @var array
      */
-    public $checksumIgnore;
+    private $checksumIgnore;
 
     /**
      * Keep info about getting and setting all parameters (DRY)
@@ -85,13 +90,25 @@ class Settings
     private $settingParameters;
 
     /**
+     * @var ApiClient;
+     */
+    private $apiClient;
+
+    /**
+     * @var bool
+     */
+    private $initialized = false;
+
+
+    /**
      * Settings constructor.
      *
      * @param $slug
      */
-    public function __construct($slug)
+    public function __construct($slug, $apiClient)
     {
         $this->slug = $slug;
+        $this->apiClient = $apiClient;
 
         $this->settingParameters = array(
             'cron' => array('option' => 'cron', 'type' => 'string', 'default' => '15 3 * * 1'),
@@ -106,9 +123,16 @@ class Settings
             'fileOwners' => array('option' => 'file_owners', 'type' => 'string', 'default' => null),
             'fileGroups' => array('option' => 'file_groups', 'type' => 'string', 'default' => null),
             'maxFileSize' => array('option' => 'max_file_size', 'type' => 'num', 'default' => 2),
+            'followSymlinks' => array('option' => 'follow_symlinks', 'type' => 'bool', 'default' => 0),
             'checksumIgnore' => array('option' => 'checksum_ignore', 'type' => 'arr', 'default' => array()),
         );
+    }
 
+    /**
+     * On demand initialize
+     */
+    private function initialize()
+    {
         foreach ($this->settingParameters as $name => $par) {
             $value = get_option($this->slug . '_' . $par['option'], $par['default']);
             switch ($par['type']) {
@@ -127,7 +151,33 @@ class Settings
                 case 'arr':
                     $this->$name = (array)$value;
             }
+
+            if ($name == 'cron') {
+                $this->validateCron();
+            }
         }
+        $this->initialized = true;
+    }
+
+    /**
+     * Magic method to access all properties
+     *
+     * @param $name
+     *
+     * @return mixed
+     */
+    public function __get($name)
+    {
+        if (!$this->initialized) {
+            $this->initialize();
+        }
+
+        if (isset($this->settingParameters[$name])) {
+            return $this->$name;
+        }
+
+        trigger_error('Unknown property Settings::' . $name, E_USER_ERROR);
+
     }
 
     /**
@@ -135,7 +185,7 @@ class Settings
      *
      * @param $settings
      *
-     * @return \WP_Error
+     * @return \WP_Error | null
      */
     public function putSettings($settings)
     {
@@ -146,8 +196,8 @@ class Settings
                     try {
                         $cronExpression = CronExpression::factory($value);
                         $this->cron = $value;
+                        $this->validateCron();
                         update_option($this->slug . '_cron', $this->cron);
-                        do_action($this->slug . '_ensure_scheduled_tasks');
 
                     } catch (\Exception $e) {
                         return new \WP_Error('fail', 'Invalid cron pattern', array('status' => 400));
@@ -182,7 +232,38 @@ class Settings
             }
         }
 
-        return $this;
+        do_action($this->slug . '_ensure_scheduled_tasks');
+
+        $ret = (object)array();
+        foreach ($this->settingParameters as $name => $par) {
+            $ret->$name = $this->$name;
+        }
+
+        return $ret;
+
+    }
+
+    /**
+     *
+     */
+    public function validateCron()
+    {
+        if ($this->userLevel() == 'registered') {
+            try {
+            $cronExpression = CronExpression::factory($this->cron);
+            $items = explode(' ', $this->cron);
+            // We need to ensure that only monthly jobs are set
+            if (!is_numeric($items[2])) {
+                $items[2] = '1';
+            }
+            // And we also should make sure that no month or weekday is set
+            $items[3] = '*';
+            $items[4] = '*';
+            $this->cron = join(' ', $items);
+            } catch (\Exception $e) {
+
+            }
+        }
     }
 
     /**
@@ -214,6 +295,26 @@ class Settings
 
         return $out;
 
+    }
+
+    /**
+     * @return mixed|string
+     */
+    public function userLevel()
+    {
+        $ret = get_transient($this->slug . '_accesslevel');
+
+        if (!$ret) {
+            $ret = 'anonymous';
+            $quotaInfo = $this->apiClient->getQuota();
+            if ($quotaInfo) {
+                $ret = isset($quotaInfo->access) ? $quotaInfo->access : $ret;
+            }
+
+            set_transient($this->slug . '_accesslevel', $ret, 86400);
+        }
+
+        return $ret;
     }
 
     /**
