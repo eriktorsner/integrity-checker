@@ -233,27 +233,38 @@ class BaseTest
     /**
      * Recursive glob
      *
-     * @param string $path
-     * @param string $pattern
-     * @param int    $flags
-     * @param array  $links
+     * @param string  $path
+     * @param string  $pattern
+     * @param int     $flags
+     * @param boolean $followSymlinks
+     * @param array   $links
      *
      * @return array
      */
-    function rglob($path = '', $pattern = '*', $flags = 0, $links = array())
+    protected function rglob($path = '', $pattern = '*', $flags = 0, $followSymlinks, $links = array())
     {
         $paths = glob($path.'*', GLOB_MARK|GLOB_ONLYDIR|GLOB_NOSORT);
         $files = glob($path.$pattern, $flags);
+
         foreach ($paths as $path) {
             $trimmed = rtrim($path, '/');
             if (is_link($trimmed)) {
+                if (!$followSymlinks) {
+                    // remove it from the files array
+                    if(($key = array_search($path, $files)) !== false) {
+                        unset($files[$key]);
+                    }
+                    // and don't recurse into any sub folders.
+                    continue;
+                }
+
                 $link = readlink($trimmed);
                 if (in_array($link, $links)) {
                     continue;
                 }
                 $links[] = $link;
             }
-            $files = array_merge($files, $this->rglob($path, $pattern, $flags, $links));
+            $files = array_merge($files, $this->rglob($path, $pattern, $flags, $followSymlinks, $links));
         }
         return $files;
     }
