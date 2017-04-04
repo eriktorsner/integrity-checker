@@ -217,6 +217,10 @@ class ChecksumTest extends \PHPUnit_Framework_TestCase
             'return' => ABSPATH . 'wp-content/themes',
         ));
 
+        \WP_Mock::userFunction('get_transient', array(
+            'return' => false,
+        ));
+
         $mockApiClient = new \MockApiClient(array(
             'theme' => array(
                 'mocktheme' => array(

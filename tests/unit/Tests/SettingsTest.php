@@ -206,6 +206,12 @@ class SettingsTestTest extends \PHPUnit_Framework_TestCase
             ),
             'times' => 2,
         ));
+        \WP_Mock::userFunction('is_wp_error', array(
+            'return_in_order' => array(
+                false,
+            )
+        ));
+
 
 
         $dummy = new \stdClass();

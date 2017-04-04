@@ -34,29 +34,22 @@ class BackgroundProcessTest extends \PHPUnit_Framework_TestCase
     public function testRegisterRestEndPoints()
     {
         global $mockRestEndpoints;
+        $mockRestEndpoints = array();
+
+        \WP_Mock::userFunction('register_rest_route', array(
+            'return'=> function($base, $endPoint, $args) {
+                global $mockRestEndpoints;
+                $mockRestEndpoints[] = array($base, $endPoint, $args);
+            }
+        ));
 
         $testFactory = new \MockTestFactory();
         $bg          = new BackgroundProcess($testFactory);
         $bg->registerRestEndPoints();
 
-        $this->assertTrue(isset($mockRestEndpoints['integrity-checker/v1']));
-        $v1 = $mockRestEndpoints['integrity-checker/v1'];
-
-        $endpoints = array(
-            'background/(?P<session>[a-zA-Z0-9-]+)' => array(
-                'methods' => array('GET'),
-                'secure'  => 0
-            ),
-        );
-
-        foreach ($endpoints as $name => $checks) {
-            $this->assertTrue(isset($v1[$name]));
-            $endpoint = $v1[$name];
-            foreach ($checks['methods'] as $method) {
-                $this->assertTrue(isset($endpoint[$method]), "$name $method");
-                $this->assertTrue(isset($endpoint[$method]['callback']));
-            }
-        }
+        $this->assertTrue($mockRestEndpoints[0][0] == 'integrity-checker/v1');
+        $this->assertTrue($mockRestEndpoints[0][1] == 'background/(?P<session>[a-zA-Z0-9-]+)');
+        $this->assertEquals('GET', $mockRestEndpoints[0][2]['methods'][0]);
 
         $mockRestEndpoints = array();
     }
@@ -345,6 +338,32 @@ class BackgroundProcessTest extends \PHPUnit_Framework_TestCase
         $bg->init('abc123');
         $jobCount = $bg->jobCount();
         $this->assertEquals(2, $jobCount);
+
+    }
+
+    public function testOnShutdown()
+    {
+        $testFactory = new \MockTestFactory();
+        $bg = new BackgroundProcess($testFactory);
+        $bg->onShutdown();
+
+        $queue = array(
+            (object)array('class' => 'foo', 'method' => 'analyze', 'priority' => 10),
+            (object)array('class' => 'foo', 'method' => 'analyze', 'priority' => 20),
+        );
+
+        \WP_Mock::userFunction('get_transient', array(
+            'args' => 'tt_bgprocess_queue_abc123',
+            'return_in_order' => array(
+                $queue,
+            ),
+            'times' => 1,
+        ));
+
+        $bg = new BackgroundProcess($testFactory);
+        $bg->init('abc123');
+        $bg->onShutdown();
+
 
     }
 }

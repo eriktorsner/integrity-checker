@@ -6,6 +6,7 @@ class ProcessTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         \WP_Mock::setUp();
+        require_once INTEGRITY_CHECKER_ROOT . '/tests/class-wp-error.php';
     }
 
     public function tearDown()
@@ -40,7 +41,7 @@ class ProcessTest extends \PHPUnit_Framework_TestCase
         $req = new \MockRequest(array('parameters' => array('name' => 'voidtest')));
         $proc = new Process($testFactory, $settings, $state, $backgroundProcess);
         $ret = $proc->status($req);
-        $this->assertTrue(is_wp_error($ret));
+        $this->assertTrue(($ret instanceof \WP_Error));
 
         // Try w/o a given test name
         $req = new \MockRequest(array());
@@ -60,7 +61,7 @@ class ProcessTest extends \PHPUnit_Framework_TestCase
         $req = new \MockRequest(array('parameters' => array('name' => 'voidtest')));
         $proc = new Process($testFactory, $settings, $state, $backgroundProcess);
         $ret = $proc->update($req);
-        $this->assertTrue(is_wp_error($ret));
+        $this->assertTrue(($ret instanceof \WP_Error));
 
         // Try with an existing test name, but invalid payload
         $req = new \MockRequest(array(
@@ -69,7 +70,7 @@ class ProcessTest extends \PHPUnit_Framework_TestCase
         ));
         $proc = new Process($testFactory, $settings, $state, $backgroundProcess);
         $ret = $proc->update($req);
-        $this->assertTrue(is_wp_error($ret));
+        $this->assertTrue(($ret instanceof \WP_Error));
 
         // Try with an existing test name and valid json payload, but not our state param
         $req = new \MockRequest(array(
@@ -78,7 +79,7 @@ class ProcessTest extends \PHPUnit_Framework_TestCase
         ));
         $proc = new Process($testFactory, $settings, $state, $backgroundProcess);
         $ret = $proc->update($req);
-        $this->assertTrue(is_wp_error($ret));
+        $this->assertTrue(($ret instanceof \WP_Error));
 
         // Try with an existing test name and valid json payload and valid parameter
         $req = new \MockRequest(array(
@@ -110,7 +111,7 @@ class ProcessTest extends \PHPUnit_Framework_TestCase
         $req = new \MockRequest(array('parameters' => array('name' => 'voidtest')));
         $proc = new Process($testFactory, $settings, $state, $backgroundProcess);
         $ret = $proc->getTestResults($req);
-        $this->assertTrue(is_wp_error($ret));
+        $this->assertTrue(($ret instanceof \WP_Error));
 
         // Try with a valid test name
         $req = new \MockRequest(array('parameters' => array('name' => 'footest')));

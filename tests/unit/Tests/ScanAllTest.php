@@ -22,10 +22,6 @@ class ScanAllTest extends \PHPUnit_Framework_TestCase
         $wpdb = \Mockery::mock( '\WPDB' );
         $wpdb->prefix = 'wp_';
 
-        $wpdb->shouldReceive('delete')
-             ->once()
-             ->with($tableName, array('checkpoint' => 0));
-
         $dummy = new \stdClass();
         $s = new Tests\ScanAll(new \MockSettings(), new \MockState(), $dummy, $dummy);
         $s->setBackgroundProcess(new \MockBackgroundProcess());
@@ -34,6 +30,12 @@ class ScanAllTest extends \PHPUnit_Framework_TestCase
 
     public function testScan()
     {
+        global $wpdb;
+        $tableName = 'wp_integrity_checker_files';
+
+        $wpdb = \Mockery::mock( '\WPDB' );
+        $wpdb->prefix = 'wp_';
+
         exec('rm -rf ' . ABSPATH . '*');
         @mkdir(ABSPATH . 'wp-admin/includes', 0777, true);
         @mkdir(ABSPATH . 'wp-includes', 0777, true);
@@ -43,13 +45,16 @@ class ScanAllTest extends \PHPUnit_Framework_TestCase
         file_put_contents(ABSPATH . 'wp-includes/file2.php', '<?php');
         file_put_contents(ABSPATH . 'wp-content/plugins/foobar/file3.php', '<?php');
 
+        $wpdb->shouldReceive('query');
+        $wpdb->shouldReceive('prepare');
+
         $dummy = new \stdClass();
         $bg = new \MockBackgroundProcess();
         $s = new Tests\ScanAll(new \MockSettings(), new \MockState(), $dummy, $dummy);
         $s->setBackgroundProcess($bg);
         $s->scan($dummy);
 
-        $this->assertEquals(5, count($bg->jobs));
+        $this->assertEquals(7, count($bg->jobs));
     }
 
     public function testScanFolder()
@@ -74,18 +79,18 @@ class ScanAllTest extends \PHPUnit_Framework_TestCase
         $wpdb->shouldReceive('insert')
              ->times(2);
 
+        $wpdb->shouldReceive('prepare')
+             ->times(2);
+
+        $wpdb->shouldReceive('get_row')
+             ->times(2);
+
         $dummy = new \stdClass();
         $bg = new \MockBackgroundProcess();
         $s = new Tests\ScanAll(new \MockSettings(), new \MockState(), $dummy, $dummy);
         $s->setBackgroundProcess($bg);
         $s->scanFolder($job);
 
-    }
-
-    public function _testAnalyze()
-    {
-        $this->_testAnalyze(false);
-        //$this->_testAnalyze(time());
     }
 
     public function testAnalyze()
@@ -102,18 +107,6 @@ class ScanAllTest extends \PHPUnit_Framework_TestCase
             'return' => true,
         ));
 
-        $tableName = 'wp_integrity_checker_files';
-
-        $wpdb = \Mockery::mock( '\WPDB' );
-        $wpdb->prefix = 'wp_';
-
-        $wpdb->shouldReceive('delete')
-             ->once()
-             ->with($tableName, array('checkpoint' => 1));
-
-        $wpdb->shouldReceive('query')
-             ->once();
-
         $dummy = new \stdClass();
         $bg = new \MockBackgroundProcess();
         $s = new Tests\ScanAll(new \MockSettings(), new \MockState(), $dummy, $dummy);
@@ -121,5 +114,8 @@ class ScanAllTest extends \PHPUnit_Framework_TestCase
         $s->analyze($dummy);
 
         $s->analyze($dummy);
+        $t = $s->transientState;
+        $this->assertTrue(isset($t['result']['ts']));
+
     }
 }

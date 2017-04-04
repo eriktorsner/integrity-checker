@@ -72,9 +72,11 @@ class MockSettings
     public $fileMasks = '0644,0640,0600';
     public $folderMasks = '0755,0750,0700';
     public $maxFileSize = 2097152; //2 MB
+    public $followSymlinks = 1;
     public $checksumIgnore = array(
         'plugins' => array('ignoreme/ignoreme.php'),
     );
+    public $checkpointInterval = '1 month';
 }
 
 class MockState
@@ -123,6 +125,13 @@ class MockApiClient
     public function __construct($arr)
     {
         $this->arr = $arr;
+    }
+
+    public function getQuota()
+    {
+        return (object)array(
+            'access' => 'anonymous',
+        );
     }
 
     public function getChecksums($type, $slug, $version)

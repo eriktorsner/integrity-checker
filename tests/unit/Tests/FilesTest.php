@@ -65,21 +65,18 @@ class FilesTest extends \PHPUnit_Framework_TestCase
         $wpdb = \Mockery::mock( '\WPDB' );
         $wpdb->prefix = 'wp_';
         $wpdb->shouldReceive('get_results')
-             ->once()
-             ->with( "select * from $tableName WHERE checkpoint=0 LIMIT 0, 2000")
-             ->andReturn(array(
-                 (object)array('id' => 1, 'mask' => 644, 'isdir' => 0, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
-                 (object)array('id' => 2, 'mask' => 755, 'isdir' => 1, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
-                 (object)array('id' => 3, 'mask' => 777, 'isdir' => 0, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
-                 (object)array('id' => 4, 'mask' => 777, 'isdir' => 1, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
-                 (object)array('id' => 5, 'mask' => 644, 'isdir' => 0, 'fileowner' => 'nobody', 'filegroup' => 'www-data'),
-                 (object)array('id' => 6, 'mask' => 755, 'isdir' => 1, 'fileowner' => 'www-data', 'filegroup' => 'nobody'),
-             ));
-
-        $wpdb->shouldReceive('get_results')
-             ->once()
-             ->with( "select * from $tableName WHERE checkpoint=0 LIMIT 2000, 2000")
-             ->andReturn(array());
+             ->times(2)
+             ->andReturn(
+                    array(
+                        (object)array('id' => 1, 'mode' => 644, 'isdir' => 0, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
+                        (object)array('id' => 2, 'mode' => 755, 'isdir' => 1, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
+                        (object)array('id' => 3, 'mode' => 777, 'isdir' => 0, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
+                        (object)array('id' => 4, 'mode' => 777, 'isdir' => 1, 'fileowner' => 'www-data', 'filegroup' => 'www-data'),
+                        (object)array('id' => 5, 'mode' => 644, 'isdir' => 0, 'fileowner' => 'nobody', 'filegroup' => 'www-data'),
+                        (object)array('id' => 6, 'mode' => 755, 'isdir' => 1, 'fileowner' => 'www-data', 'filegroup' => 'nobody'),
+                    ),
+                    array()
+                );
 
         $wpdb->shouldReceive('get_col')
              ->andReturn(array('www-data'));
