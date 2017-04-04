@@ -136,10 +136,15 @@ class integrityChecker
         // Handler for the scheduled events
         add_action($this->scheduledScanCron, array($this, 'runScheduledScans'));
 
+        add_action("{$this->pluginSlug}_ensure_scheduled_tasks", array($this, 'ensureScheduledTasks'),10, 0);
+
         // Handler for finished tests
         add_action("{$this->pluginSlug}_test_finished", array($this, 'finishedTest'), 10, 2);
 
-        // Handler for
+        // Handler for core or theme/plugin upgrade. For logging etc.
+        add_action("upgrader_process_complete", array($this, 'upgradeProcessComplete'), 10, 2);
+
+        // Handler for getting test state via filter
         add_filter("{$this->pluginSlug}_test_state", array($this, 'getTestState'), 10, 1);
 
     }
@@ -187,28 +192,35 @@ class integrityChecker
 
         $sql = "CREATE TABLE $tableName (
           id int(11) NOT NULL AUTO_INCREMENT,
-          checkpoint tinyint(1) NOT NULL DEFAULT 0,
-          name text NOT NULL,
-          namehash char(32) NOT NULL,
+          version int(11) NOT NULL DEFAULT 0,
+          name varchar(4096) NOT NULL,
           hash char(64) DEFAULT '',
           modified int(11) DEFAULT 0,
+          found int(11) DEFAULT 0,
+          deleted int(11) DEFAULT NULL,
           isdir tinyint(1) NOT NULL DEFAULT 0,
           islink tinyint(1) NOT NULL DEFAULT 0,
           size bigint(20) NOT NULL DEFAULT 0,          
-          mask smallint(5) NOT NULL DEFAULT 0,
+          mode smallint(5) NOT NULL DEFAULT 0,
           fileowner varchar(32) DEFAULT '',
           filegroup varchar(32) DEFAULT '',
           mime varchar(50) NOT NULL DEFAULT '',
           permissionsresult smallint(5) DEFAULT 0,
           status enum('','deleted') NOT NULL DEFAULT '',
           PRIMARY KEY (id),
-          KEY namehash (namehash),
+          KEY name (name),
+          KEY version (version),
           KEY permissionsresult (permissionsresult)
         ) $charset_collate;";
 
-        dbDelta($sql);
+        $result = dbDelta($sql);
 
         update_option($this->pluginSlug . '_dbversion', $this->dbVersion);
+    }
+
+    public function upgradeProcessComplete($object, $options)
+    {
+        $i = 0;
     }
 
     /**
@@ -231,6 +243,12 @@ class integrityChecker
     public function ensureScheduledTasks()
     {
         $reSchedule = false;
+
+        if (!$this->settings->enableScheduleScans || $this->settings->userLevel() == 'anonymous') {
+            wp_clear_scheduled_hook($this->scheduledScanCron);
+            return;
+        }
+
         $nextScheduled = wp_next_scheduled($this->scheduledScanCron);
         try {
             $cronExpr = CronExpression::factory($this->settings->cron);
