@@ -225,25 +225,49 @@ var jqCronDefaultSettings = {
 
 		// get cron value
 		this.getCron = function(){
+			resetCron = false;
 			var period = _selectorPeriod.getValue();
 			var items = ['*', '*', '*', '*', '*'];
 			if(period == 'hour') {
 				items[0] = _selectorMins.getCronValue();
+				if (items[0] == '*' && !settings.multiple_time_minutes) {
+					items[0] = '1';
+					resetCron = true;
+				}
 			}
 			if(period == 'day' || period == 'week' || period == 'month' || period == 'year') {
 				items[0] = _selectorTimeM.getCronValue();
+				if (items[0] == '*' && !settings.multiple_time_minutes) {
+					items[0] = '1';
+					resetCron = true;
+				}
 				items[1] = _selectorTimeH.getCronValue();
+				if (items[1] == '*' && !settings.multiple_time_hours) {
+					items[1] = '1';
+					resetCron = true;
+				}
 			}
 			if(period == 'month' || period == 'year') {
 				items[2] = _selectorDom.getCronValue();
+				if (items[2] == '*' && !settings.multiple_dom) {
+					items[2] = '1';
+					resetCron = true;
+				}
 			}
 			if(period == 'year') {
 				items[3] = _selectorMonth.getCronValue();
 			}
 			if(period == 'week') {
 				items[4] = _selectorDow.getCronValue();
+				if (items[4] == '*' && !settings.multiple_dow) {
+					items[4] = '1';
+					resetCron = true;
+				}
 			}
-			return items.join(' ');
+
+			ret = items.join(' ');
+			if (resetCron) this.setCron(ret)
+			return ret;
 		};
 
 		// set cron (string like * * * * *)

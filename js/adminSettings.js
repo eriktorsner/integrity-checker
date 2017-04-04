@@ -18,20 +18,62 @@ jQuery(document).ready(function($) {
         var filesSettingsTmpl = wp.template('filesSettingsTmpl');
         $('<div></div>').html(filesSettingsTmpl()).appendTo(files);
 
+        if (integrityCheckerApi.access == 'anonymous') {
+            var options = {
+                enabled_day: false,
+                enabled_week: false,
+                enabled_month: false,
+                multiple_dom: false,
+                multiple_dow: false,
+                disabled: true,
+                multiple_time_minutes: false,
+                multiple_time_hours: false
+            }
+        } else if(integrityCheckerApi.access == 'registered') {
+            var options = {
+                enabled_day: false,
+                enabled_week: false,
+                enabled_month: true,
+                multiple_dom: false,
+                multiple_dow: false,
+                disabled: false,
+                multiple_time_minutes: false,
+                multiple_time_hours: false
+            }
+        } else {
+            var options = {
+                enabled_day: true,
+                enabled_week: true,
+                enabled_month: true,
+                multiple_dom: true,
+                multiple_dow: true,
+                disabled: false,
+                multiple_time_minutes: true,
+                multiple_time_hours: true
+            }
+        }
+
         // Init schedule UI
-        $('.jqcronSched').jqCron({
+        cron = $('.jqcronSched');
+        cron.jqCron({
+            enabled_day: options.enabled_day,
+            enabled_week: options.enabled_week,
+            enabled_month: options.enabled_month,
+            multiple_dom: options.multiple_dom,
+            multiple_dow: options.multiple_dow,
+            disabled: options.disabled,
+            multiple_time_hours: options.multiple_time_hours,
+            multiple_time_minutes: options.multiple_time_minutes,
+
+            enabled_year: false,
             enabled_minute: false,
             enabled_hour: false,
-            enabled_year: false,
-            multiple_dom: true,
-            multiple_month: true,
-            multiple_mins: true,
-            multiple_dow: true,
-            multiple_time_hours: true,
-            multiple_time_minutes: false,
+            multiple_month: false,
+            multiple_mins: false,
             default_period: 'week',
-            default_value: '10 23 * * 1-7',
+            default_value: '0 1 1 * *',
             no_reset_button: true,
+            numeric_zero_pad: true,
             bind_to: $('input[name="cronValue"]'),
             bind_method: {
                 set: function($element, value) {
@@ -43,6 +85,8 @@ jQuery(document).ready(function($) {
             },
             lang: 'en'
         });
+
+        accessLevelAdjust();
     }
 
     $('a.saveSchedSettings').live('click', function(e) {
@@ -100,21 +144,26 @@ jQuery(document).ready(function($) {
     $('a.saveFileSettings').live('click', function(e) {
         $('.saveFileSettingsOk').hide();
         $('.saveFileSettingsFail').hide();
+
         putRest(
             '/integrity-checker/v1/settings',
             {
                 'maxFileSize': $('input[name="maxFileSize"]').val(),
+                'followSymlinks': $('input[name="followSymlinks"]').is(':checked')?1:0,
                 'fileMasks': $('input[name="fileMasks"]').val(),
                 'folderMasks': $('input[name="folderMasks"]').val(),
                 'fileOwners': $('input[name="fileOwners"]').val(),
-                'fileGroups': $('input[name="fileGroups"]').val()
+                'fileGroups': $('input[name="fileGroups"]').val(),
+                'checkpointInterval': $('select[name="checkpointInterval"]').val()
             },
             function(data) {
                 $('input[name="maxFileSize"]').val(data.data.maxFileSize);
+                $('input[name="followSymlinks"]').prop('checked', (data.data.followSymlinks == 1));
                 $('input[name="fileMasks"]').val(data.data.fileMasks);
                 $('input[name="folderMasks"]').val(data.data.folderMasks);
                 $('input[name="fileOwners"]').val(data.data.fileOwners);
                 $('input[name="fileGroups"]').val(data.data.fileGroups);
+                $('input[name="checkpointInterval"]').val(data.data.checkpointInterval);
 
                 $('.saveFileSettingsOk').show();
             },
