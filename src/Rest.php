@@ -57,6 +57,7 @@ class Rest
         $typeDef = '(?P<type>[a-zA-Z0-9-]+)';
         $slugDef = '(?P<slug>[a-zA-Z0-9-]+)';
         $nameDef = '(?P<name>[a-zA-Z0-9-]+)';
+        $parmDef = '(?P<param>[a-zA-Z0-9-]+)';
         $emailDef = '(?P<emails>.*)';
 
         /** *********************************************
@@ -163,6 +164,27 @@ class Rest
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
+
+        register_rest_route('integrity-checker/v1', "testresult/scanall/truncatehistory", array(
+            'methods' => array('PUT'),
+            'callback' => function($request) use($rest) {
+                $strBody = $request->get_body();
+                $data = json_decode($strBody);
+                $ret = $rest->process->changeTestResults('scanall', 'truncateHistory', $data);
+
+                $escape = filter_var($request->get_param('esc'), FILTER_VALIDATE_BOOLEAN);
+                if ($escape) {
+                    $rest->escapeObjectStrings($ret);
+                }
+
+                return is_wp_error($ret)?
+                    $ret:
+                    $rest->jSend($ret);
+            },
+            'permission_callback' => array($this, 'checkPermissions'),
+        ));
+
+
 
         /** *********************************************
          *
