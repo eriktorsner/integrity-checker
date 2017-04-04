@@ -30,9 +30,6 @@ class ScanAll extends BaseTest
         $this->backgroundProcess->init();
 
         parent::start($request);
-        $this->transientState = null;
-
-        $this->clearTable(false);
 
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'scan'), 10);
         $this->backgroundProcess->addJob((object)array('class' => $this->name, 'method' => 'analyze'), 20);
@@ -48,37 +45,52 @@ class ScanAll extends BaseTest
      */
     public function scan($job)
     {
-        $this->backgroundProcess->addJob((object)array(
-            'class' => $this->name,
-            'method' => 'scanFolder',
-            'parameters' => array('folder' => ABSPATH, 'recursive' => false),
-        ));
+        global $wpdb;
 
-        $this->backgroundProcess->addJob((object)array(
-            'class' => $this->name,
-            'method' => 'scanFolder',
-            'parameters' => array('folder' => ABSPATH . 'wp-admin', 'recursive' => true),
-        ));
+        $scanStart = time();
+        $this->transientState = array('scanStart' => $scanStart);
 
-        $this->backgroundProcess->addJob((object)array(
-            'class' => $this->name,
-            'method' => 'scanFolder',
-            'parameters' => array('folder' => ABSPATH . 'wp-includes', 'recursive' => true),
-        ));
+        // Assume all files are deleted until we detect them again
+        $this->markLatestFilesDeleted($scanStart);
 
-
-        // There's potentially 100s of subfolders under wp-content, too many
+        // There's potentially 100s of subfolders under the wp root, too many
         // to safely scan in one go on weaker servers. We need to divide the work
-        $wpContentSubfolders = $this->rglob(ABSPATH . 'wp-content/', '*', GLOB_ONLYDIR);
+        $subFolders = $this->rglob(ABSPATH, '*', GLOB_ONLYDIR, $this->settings->followSymlinks);
+
+
         $newJobs = array();
-        foreach ($wpContentSubfolders as $folder) {
+        foreach ($subFolders as $folder) {
+
             $newJobs[] = (object)array(
                 'class' => $this->name,
                 'method' => 'scanFolder',
                 'parameters' => array('folder' => $folder, 'recursive' => false),
             );
+
         }
+
+        $newJobs[] = (object)array(
+            'class' => $this->name,
+            'method' => 'scanFolder',
+            'parameters' => array('folder' => rtrim(ABSPATH, '/'), 'recursive' => false),
+        );
+
         $this->backgroundProcess->addJobs($newJobs, 10);
+    }
+
+    /**
+     * @param int $scanStart
+     */
+    private function markLatestFilesDeleted($scanStart)
+    {
+        global $wpdb;
+
+        $tableName = $this->getTableName();
+        $sql = "UPDATE $tableName f " .
+               "  LEFT OUTER JOIN $tableName l ON f.name = l.name AND f.version < l.version " .
+               "SET f.deleted=%d " .
+               "WHERE l.id IS NULL AND f.deleted IS NULL;";
+        $wpdb->query($wpdb->prepare($sql, array($scanStart)));
     }
 
     /**
@@ -99,6 +111,7 @@ class ScanAll extends BaseTest
         $checkSummer->includeFolderInfo = true;
         $checkSummer->includeOwner = true;
         $checkSummer->recursive = $recursive;
+        $checkSummer->followSymlinks = $this->settings->followSymlinks;
         $files = $checkSummer->scan();
 
         $this->storeScanData($files);
@@ -112,25 +125,47 @@ class ScanAll extends BaseTest
         $this->transientState = array('result' => array(
             'ts' => time(),
         ));
+    }
 
-        // store new checkpoint?
-        $storeNew = true;
-        $slug = $this->settings->slug;
-        $existingCheckpoint = get_option("{$slug}_files_checkpoint", false);
-        if ($existingCheckpoint) {
-            $maxCheckpointAge = 604800; // TODO: need a setting for this
-            if (time() < ($existingCheckpoint->ts + $maxCheckpointAge)) {
-                $storeNew = false;
-            }
+    /**
+     * @param $data
+     *
+     * @return mixed
+     */
+    public function truncateHistory($data)
+    {
+        global $wpdb;
+        $tableName = $this->getTableName();
+
+        if (!is_object($data) || !isset($data->deleteScanHistoryRange)) {
+            return new \WP_Error('fail', 'Missing parameter', array('status' => 400));
         }
 
-        if ($storeNew) {
-            $this->setCheckpoint();
-            update_option(
-                "{$slug}_files_checkpoint",
-                (object)array('ts' => time(),)
-            );
+
+        if ($data->deleteScanHistoryRange == 'all') {
+            $time = time();
+        } else {
+            $time = strtotime($data->deleteScanHistoryRange, time());
         }
+
+        if ($time) {
+            // 1. delete
+            $sql = "DELETE f FROM $tableName f\n" .
+                    " LEFT OUTER JOIN $tableName l ON f.name = l.name AND f.version < l.version\n".
+                    "WHERE (l.id IS NOT NULL AND f.found < %d) OR (l.id IS NULL AND f.deleted < %d);";
+            $wpdb->query($wpdb->prepare($sql, array($time, $time)));
+
+            // 2. get the current firstScan
+            //$firstScan = $wpdb->get_var("select min(found) from $tableName");
+
+            // 2. update version and founddate on the first of each
+            $sql = "UPDATE $tableName f\n".
+                    "LEFT OUTER JOIN $tableName l ON f.name = l.name AND f.version > l.version\n".
+                    "SET f.found=%d, f.version=1\n".
+                    "WHERE l.id IS NULL";
+            $wpdb->query($wpdb->prepare($sql, array($time)));
+        }
+
     }
 
     /**
@@ -142,59 +177,56 @@ class ScanAll extends BaseTest
     {
         global $wpdb;
 
+        $scanStart = $this->transientState['scanStart'];
         $tableName = $this->getTableName();
+        $foundIds = array();
 
         foreach ($files->checksums as $name => $info) {
 
-            $wpdb->insert(
-                $tableName,
-                array(
-                    'checkpoint' => 0,
-                    'name'       => $name,
-                    'namehash'   => md5($name),
-                    'hash'       => $info->hash,
-                    'modified'   => $info->date,
-                    'isdir'      => $info->isDir,
-                    'islink'     => $info->isLink,
-                    'size'       => $info->size,
-                    'mask'       => $info->mode,
-                    'fileowner'  => $info->owner,
-                    'filegroup'  => $info->group,
-                ),
-                array('%d', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%s')
-            );
+            $existing = $wpdb->get_row($wpdb->prepare(
+               "select id, name, version, hash, mode, fileowner, filegroup FROM $tableName WHERE name=%s " .
+               "ORDER BY version desc LIMIT 0,1",
+                array($name)
+            ));
+
+            $changed = true;
+            if ($existing) {
+                $foundIds[] = $existing->id;
+                $changed = $existing->hash != $info->hash
+                            || $existing->fileowner != $info->owner
+                            || $existing->filegroup != $info->group
+                            || $existing->mode != (int)$info->mode;
+            }
+
+            if (!$existing || $changed) {
+                $version = $existing ? $existing->version + 1 : 1;
+                $wpdb->insert(
+                    $tableName,
+                    array(
+                        'version'    => $version,
+                        'name'       => $name,
+                        'hash'       => $info->hash,
+                        'found'      => $scanStart,
+                        'modified'   => $info->date,
+                        'isdir'      => $info->isDir,
+                        'islink'     => $info->isLink,
+                        'size'       => $info->size,
+                        'mode'       => $info->mode,
+                        'fileowner'  => $info->owner,
+                        'filegroup'  => $info->group,
+                    ),
+                    array('%d', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%s')
+                );
+            }
+        }
+
+        // Reset the deleted flag
+        if (count($foundIds) > 0) {
+            $wpdb->query(sprintf(
+                "UPDATE $tableName SET deleted = NULL WHERE id in(%s) AND deleted=%d",
+                join(',', $foundIds),
+                $scanStart
+            ));
         }
     }
-
-    /**
-     * Delete rows from the files table
-     *
-     * @param bool $checkpoint
-     */
-    private function clearTable($checkpoint = false)
-    {
-        global $wpdb;
-        $wpdb->delete(
-            $this->getTableName(),
-            array('checkpoint' => $checkpoint ? '1' : 0)
-        );
-    }
-
-    /**
-     * Create a checkpoint from the current scan result
-     */
-    private function setCheckpoint()
-    {
-        global $wpdb;
-        $tableName = $this->getTableName();
-        $fields = 'name, namehash, hash, modified, isdir, islink, size, mask, fileowner, filegroup, mime, status';
-        $this->clearTable(true);
-        $sql = "INSERT INTO $tableName(checkpoint, $fields)\n".
-               "  SELECT 1, $fields\n" .
-               "    FROM $tableName \n" .
-               "    WHERE checkpoint = 0";
-
-        $wpdb->query($sql);
-    }
-
 }
