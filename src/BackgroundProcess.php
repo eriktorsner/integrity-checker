@@ -187,6 +187,9 @@ class BackgroundProcess
      */
 	public function onShutdown()
     {
+        if (is_null($this->session)) {
+            return;
+        }
         $queueTransientName = $this->transientName('queue');
         $jobs = $this->getQueue($queueTransientName);
 
