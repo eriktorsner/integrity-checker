@@ -80,10 +80,54 @@ class ApiClient
                 break;
             case 200:
                 $out = json_decode($ret['body']);
+                $this->parseQuota($out);
                 break;
         }
 
         return $out;
+    }
+
+    /**
+     * @param object $quota
+     */
+    private function parseQuota($quota)
+    {
+        if ($quota->hourlyLimit == -1 && $quota->dailyLimit == -1 && $quota->monthlyLimit == -1) {
+            $quota->rateLimit = 'Unlimited';
+            $quota->resetIn = '';
+            $quota->currentUsage = '';
+        }
+
+        if ($quota->rateLimit != 'Unlimited') {
+            $rateLimit = array();
+            $resetIn = array();
+            $currentUsage = array();
+            if ($quota->hourlyLimit > 0) {
+                $rateLimit[] = $quota->hourlyLimit . '/hour';
+                $resetIn[] = $quota->hourlyResetIn . ' s';
+                $currentUsage[] = $quota->hourlyCurrent;
+            }
+            if ($quota->dailyLimit > 0) {
+                $rateLimit[] = $quota->dailyLimit . '/day';
+                $resetIn[] = floor($quota->dailyResetIn/3600) . ' h';
+                $currentUsage[] = $quota->dailyCurrent;
+            }
+            if ($quota->monthlyLimit > 0) {
+                $rateLimit[] = $quota->monthlyLimit . '/month';
+                $resetIn[] = floor($quota->monthlyResetIn/86400) . ' days';
+                $currentUsage[] = $quota->monthlyCurrent;
+            }
+
+            $quota->rateLimit = join(' + ', $rateLimit);
+            $quota->resetIn = join(' / ', $resetIn);
+            $quota->currentUsage = join(' / ', $currentUsage);
+        }
+
+        $quota->siteLimit = 'Unlimited';
+        if ($quota->maxSites > -1) {
+            $quota->siteLimit = $quota->maxSites . ' sites';
+        }
+
     }
 
     /**
@@ -100,12 +144,12 @@ class ApiClient
             update_option('wp_checksum_apikey', $apiKey);
             $ret->message = __('API key updated', 'integrity-checker');
             return $ret;
-        } else {
-            return new \WP_Error(
-                400,
-                __('API key verification failed. Key not updated', 'integrity-checker')
-            );
         }
+
+        return new \WP_Error(
+            400,
+            __('API key verification failed. Key not updated', 'integrity-checker')
+        );
     }
 
     /**
@@ -194,9 +238,10 @@ class ApiClient
                 break;
             case 200:
                 $out = json_decode($out['body']);
-                if (isset($out->checksums)) {
-                    $out->checksums = (array)$out->checksums;
+                if (!isset($out->checksums))  {
+                    $out->checksums = array();
                 }
+                $out->checksums = (array)$out->checksums;
                 break;
         }
 
@@ -280,6 +325,11 @@ class ApiClient
 
         // No? Let's see if we can create a key via the API
         $url = join('/', array($this->baseUrl, 'anonymoususer'));
+        $args = array(
+            'headers' => array(
+                'X-Checksum-Client' => 'integrity-checker; ' . INTEGRITY_CHECKER_VERSION,
+            ),
+        );
         $out = wp_remote_post($url);
         $this->updateSiteId($out);
         if ($out['response']['code'] == 200) {
@@ -306,11 +356,17 @@ class ApiClient
 
         if (!isset($response['http_response'])) {
             return;
+
         }
         $objHeaders = $response['http_response'];
         $headers = $objHeaders->get_headers()->getAll();
+
         if (isset($headers['x-checksum-site-id'])) {
-            update_option('wp_checksum_siteid', $headers['x-checksum-site-id']);
+            $currentId = get_option('wp_checksum_siteid', false);
+            if ($currentId != $headers['x-checksum-site-id']) {
+                update_option('wp_checksum_siteid', $headers['x-checksum-site-id']);
+                // copy site settings to new site...
+            }
         }
     }
 
