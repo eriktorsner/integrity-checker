@@ -15,16 +15,19 @@ class RuntimeProvider implements ServiceProviderInterface
             'settings' => 'integrityChecker\Tests\Settings',
         );
 
+        $pimple['apiClient'] = function ($pimple) {
+            return new \integrityChecker\ApiClient();
+        };
+
         $pimple['settings'] = function ($pimple) use($slug) {
-            return new \integrityChecker\Settings($slug);
+            return new \integrityChecker\Settings(
+                $slug,
+                $pimple['apiClient']
+            );
         };
 
         $pimple['state'] = function ($pimple) use($slug) {
             return new \integrityChecker\State($slug);
-        };
-
-        $pimple['apiClient'] = function ($pimple) {
-            return new \integrityChecker\ApiClient();
         };
 
         $pimple['testfactory'] = function($pimple) use($tests) {
