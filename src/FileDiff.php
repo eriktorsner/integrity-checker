@@ -7,6 +7,20 @@ namespace integrityChecker;
  */
 class FileDiff
 {
+    /**
+     * @var ApiClient
+     */
+    private $apiClient;
+
+    /**
+     * FileDiff constructor.
+     *
+     * @param ApiClient $apiClient
+     */
+    public function __construct($apiClient)
+    {
+        $this->apiClient = $apiClient;
+    }
 
     /**
      * Compare a local file with the original file
@@ -39,14 +53,17 @@ class FileDiff
                 break;
         }
 
+
         if ($files->remote['response']['code'] != 200) {
             if (strlen($files->remote['body']) > 0) {
                 $body = json_decode($files->remote['body']);
-                return new \WP_Error($body->status, $body->message);
+                return new \WP_Error($body->status, $body->message, array('status' => 200));
             }
+
             return new \WP_Error(
                 $files->remote['response']['code'],
-                $files->remote['response']['message']
+                $files->remote['response']['message'],
+                array('status' => 200)
             );
         }
 
@@ -60,7 +77,18 @@ class FileDiff
                 )
             );
 
-            return $html;
+            $return = new \WP_REST_Response($html);
+
+            $objHeaders = $files->remote['headers'];
+            $headers = $objHeaders->getAll();
+            if (isset($headers['x-checksum-diff-remain'])) {
+                $return->header(
+                    'x-integrity-checker-diff-remain',
+                    $headers['x-checksum-diff-remain']
+                );
+            }
+
+            return $return;
         }
         return new \WP_Error(400, 'File not found');
 
@@ -82,8 +110,7 @@ class FileDiff
         $localFile = ABSPATH . '/' . $file;
         $localFileContent = file_get_contents($localFile);
 
-        $client = new ApiClient();
-        $remoteFile = $client->getFile('core', 'core', $wp_version, $file);
+        $remoteFile = $this->apiClient->getFile('core', 'core', $wp_version, $file);
 
         return (object)array(
             'local' => $localFileContent,
@@ -106,8 +133,7 @@ class FileDiff
             $localFile        = $info->root . '/' . $file;
             $localFileContent = file_get_contents($localFile);
 
-            $client     = new ApiClient();
-            $remoteFile = $client->getFile('plugin', $slug, $info->version, $file);
+            $remoteFile = $this->apiClient->getFile('plugin', $slug, $info->version, $file);
 
             return (object)array(
                 'local'  => $localFileContent,
@@ -134,8 +160,7 @@ class FileDiff
             $localFile = $info->root. '/' . $file;
             $localFileContent = file_get_contents($localFile);
 
-            $client = new ApiClient();
-            $remoteFile = $client->getFile('theme', $slug, $info->version, $file);
+            $remoteFile = $this->apiClient->getFile('theme', $slug, $info->version, $file);
 
             return (object)array(
                 'local'  => $localFileContent,
