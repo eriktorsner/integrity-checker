@@ -96,7 +96,7 @@ class AdminUIHooks
             'strong'  => array(),
         );
 
-        $current = get_site_transient( 'update_plugins' );
+        $current = get_site_transient('update_plugins');
         $response = $current->checked[$pluginFile];
 
         $pluginName   = wp_kses($pluginData['Name'], $pluginsAllowedtags);
