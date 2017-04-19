@@ -198,13 +198,7 @@ class Rest
                 $slug = $request->get_param('slug');
                 $file = $request->get_header('X-Filename');
 
-                $ret = $rest->fileDiff->getDiff($type, $slug, $file);
-
-                if (is_object($ret)) {
-                    return $ret;
-                } else {
-                    return $ret;
-                }
+                return $rest->fileDiff->getDiff($type, $slug, $file);
             },
             'permission_callback' => array($this, 'checkPermissions'),
         ));
@@ -255,15 +249,15 @@ class Rest
      */
     public function checkPermissions($request)
     {
+        if (defined('INTEGRITY_CHECKER_NO_REST_AUTH') && INTEGRITY_CHECKER_NO_REST_AUTH) {
+            return true; // @codeCoverageIgnore
+        }
+
 	    if ($nonce = $request->get_header('X-WP-NONCE')) {
 			if (wp_verify_nonce($nonce, 'wp_rest')) {
 			    return true;
 		    }
 	    }
-
-	    if (defined('INTEGRITY_CHECKER_NO_REST_AUTH') && INTEGRITY_CHECKER_NO_REST_AUTH) {
-            return true; // @codeCoverageIgnore
-        }
 
         return false;
     }
