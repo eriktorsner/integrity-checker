@@ -118,11 +118,17 @@
 
 <script type="text/html" id="tmpl-diffErrorTmpl">
     <div class="diffError">
-        <p>
-            <?php _e('There was a problem getting the original version of the file','integrity-checker');?>
-            <?php _e('The server said:','integrity-checker');?>
-        </p>
-        <strong>Code:</strong> {{{ data.code }}} <br>
-        <strong>Message:</strong> {{{ data.message }}} <br>
+        <# if (data.code == 200) { #>
+            <p>
+                <?php _e('This is a false positive, the diff is just white space');?>
+            </p>
+        <# } else { #>
+            <p>
+                <?php _e('There was a problem getting the original version of the file','integrity-checker');?>
+                <?php _e('The server said:','integrity-checker');?>
+            </p>
+            <strong>Code:</strong> {{{ data.code }}} <br>
+            <strong>Message:</strong> {{{ data.message }}} <br>
+        <# } #>
     </div>
 </script>

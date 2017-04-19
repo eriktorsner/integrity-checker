@@ -23,28 +23,15 @@ $strDiagnostic = $diagnostic->get();
 <p>
 	<?php _e(
 		"Integrity Checker uses a central database with checksum information about plugins and themes. " .
-		"Access to the API is free, but to discourage abuse, there's a limit to the amount of requests " .
-		"per hour that can be made without purchasing a license key. ",
+		"Access to the API is free, but to discourage abuse, there's a limit to the functionality and amount of " .
+		"requests that can be made without upgrading the license key. Read more in the <a class=\"termsLink\">terms</a> " .
+		"or on the <a href=\"tools.php?page=integrity-checker_options&tab=tab-upgrade\">Upgrade page</a>",
 		'integrity-checker');
 	?>
-	<?php _e(
-		"When Integrity Checker was first installed, a free API-key was generated for you. This free key allows for 25 requests " .
-		"per hour. This should be enough for most small and medium sized WordPress installations to perform a check of all " .
-		"installed plugins and themes.", 'integrity-checker');
-	?>
-	<?php _e(
-		"You can increase your hourly limit to 75 requests per hour by registering with your email address below. " .
-		"For larger sites Licence keys or for more frequent checks can be purchased at:",
-		'integrity-checker');
-	?>
-
-	<a href="https://www.wpessentials.io/plugins/integrity-checker/">
-		https://www.wpessentials.io/plugins/integrity-checker/
-	</a>
 </p>
 <p>
 	<?php echo sprintf(
-		__('This is a free plugin - best effort support is given via the <a href="%s">WordPress support forums</a>.',
+		__('This is a free plugin - best effort support is given via the <a href="%s" target="_blank">WordPress support forums</a>.',
 			'integrity-checker'),
 		'http://wordpress.org/support/plugin/integrity-checker');?>
 </p>
@@ -99,8 +86,6 @@ $strDiagnostic = $diagnostic->get();
 		<td>Current connected sites</td>
 		<td>{{{data.connectedSites }}}</td>
 	</tr>
-
-
 	<tr>
 		<td>Access type</td>
 		<td>{{{data.access }}}</td>
@@ -110,7 +95,6 @@ $strDiagnostic = $diagnostic->get();
         <td>
             <# if (data.validationStatus == 'VALIDATED') {#>
                 {{{ data.email }}}
-	            <?php _e('The <a class="termsLink">terms</a>','integrity-checker');?>
             <# } else { #>
                 <input id="submitEmail" type="text" value="{{{ data.email }}}" />
                 <a class="button-primary submitEmailBtn">
@@ -125,6 +109,7 @@ $strDiagnostic = $diagnostic->get();
 		            'the <a class="termsLink">terms</a>','integrity-checker');?>
                 <div id="submitEmailMessage">
                     <# if (data.validationStatus == 'PENDING') { #>
+	                    <?php _e('Your email address is PENDING validation. ', 'integrity-checker');?>
                         <?php _e('A verification email has been sent to you. Please check your inbox. ', 'integrity-checker');?>
                         <br>
                         <?php _e('If you haven\'t received the email, click Resend above to retry.', 'integrity-checker');?>
@@ -137,7 +122,7 @@ $strDiagnostic = $diagnostic->get();
 	<tr>
 		<td colspan="2">
 			<a class="button-primary refreshQuota">
-				<?php _e('Refresh', 'integrity-checker' ) ?>
+				<?php _e('Refresh quota', 'integrity-checker' ) ?>
 			</a>
 		</td>
 	</tr>
