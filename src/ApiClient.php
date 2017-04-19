@@ -13,6 +13,7 @@ class ApiClient
     const RESOURCE_NOT_FOUND = 4;
     const INVALID_EMAIL = 5;
     const EMAIL_IN_USE = 6;
+    const UNKNOWN_ERROR = 99;
 
     /**
      * @var string
@@ -60,6 +61,7 @@ class ApiClient
 
         if (!$apiKey) {
             $this->lastError = self::NO_APIKEY;
+            return null;
         }
 
         $url = join('/', array($this->baseUrl, 'quota'));
@@ -92,6 +94,7 @@ class ApiClient
      */
     private function parseQuota($quota)
     {
+        $quota->rateLimit = 'TBD';
         if ($quota->hourlyLimit == -1 && $quota->dailyLimit == -1 && $quota->monthlyLimit == -1) {
             $quota->rateLimit = 'Unlimited';
             $quota->resetIn = '';
@@ -128,6 +131,10 @@ class ApiClient
             $quota->siteLimit = $quota->maxSites . ' sites';
         }
 
+        $accessLevel = 'anonymous';
+        $accessLevel = isset($quota->access) ? $quota->access : $accessLevel;
+        set_transient('integrity-checker_accesslevel', $accessLevel, 1800);
+
     }
 
     /**
@@ -143,7 +150,7 @@ class ApiClient
         if ($this->lastError === 0) {
             update_option('wp_checksum_apikey', $apiKey);
             $ret->message = __('API key updated', 'integrity-checker');
-            return $ret;
+            return true;
         }
 
         return new \WP_Error(
@@ -174,7 +181,6 @@ class ApiClient
             'headers' => $this->headers($apiKey, array('Content-Type' => 'application/json')),
             'body' => json_encode(array(
                 'email' => $email,
-                'host' => get_site_url(),
             )),
         );
 
@@ -183,6 +189,7 @@ class ApiClient
         $this->updateSiteId($out);
 
         if (is_wp_error($out)) {
+            $this->lastError = self::UNKNOWN_ERROR;
             return $out;
         }
 
@@ -238,6 +245,9 @@ class ApiClient
                 break;
             case 200:
                 $out = json_decode($out['body']);
+                if (is_array($out)) {
+                    $out = (object)$out;
+                }
                 if (!isset($out->checksums))  {
                     $out->checksums = array();
                 }
@@ -334,10 +344,12 @@ class ApiClient
         $this->updateSiteId($out);
         if ($out['response']['code'] == 200) {
             $ret = json_decode($out['body']);
-            $apiKey = base64_encode($ret->user . ':' . $ret->secret);
-            update_option('wp_checksum_apikey', $apiKey);
+            if ($ret && isset($ret->apikey)) {
+                $apiKey = $ret->apikey;
+                update_option('wp_checksum_apikey', $apiKey);
 
-            return $apiKey;
+                return $apiKey;
+            }
         }
 
         return false;
