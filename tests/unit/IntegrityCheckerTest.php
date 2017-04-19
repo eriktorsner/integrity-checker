@@ -108,4 +108,29 @@ class IntegrityCheckerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(12, $ret->jobCount);
 
     }
+
+    public function testRunScheduledScans()
+    {
+        $settings = new \MockSettings();
+        $adminUiHooks = new \MockAdminUiHooks();
+        $adminPage = new \MockAdminPage();
+        $rest = new \MockRest();
+        $backgroundProcess = new \MockBackgroundProcess();
+        $ic = new integrityChecker($settings, $adminUiHooks, $adminPage, $rest, $backgroundProcess);
+
+        \WP_Mock::userFunction('get_rest_url', array(
+            'return' => 'http://foobar.com/wp-json'
+        ));
+        \WP_Mock::userFunction('wp_create_nonce', array(
+            'return' => 'abc123xyz'
+        ));
+        \WP_Mock::userFunction('wp_remote_post');
+        \WP_Mock::userFunction('wp_clear_scheduled_hook');
+
+        $ic->runScheduledScans();
+
+        $settings->enableScheduleScans = false;
+        $ic->runScheduledScans();
+
+    }
 }

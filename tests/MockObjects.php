@@ -64,6 +64,34 @@ class MockRequest
     }
 }
 
+class MockResponse
+{
+    public function __construct($arr)
+    {
+        $this->arr = $arr;
+    }
+
+    public function get_headers()
+    {
+        return new MockHeaders($this->arr['headers']);
+    }
+}
+
+class MockHeaders
+{
+    public function __construct($arr)
+    {
+        $this->arr = $arr;
+    }
+
+    public function getAll()
+    {
+        return $this->arr;
+    }
+}
+
+
+
 class MockSettings
 {
     public $slug = 'integrity-checker';
@@ -73,9 +101,19 @@ class MockSettings
     public $folderMasks = '0755,0750,0700';
     public $maxFileSize = 2097152; //2 MB
     public $followSymlinks = 1;
+    public $enableScheduleScans = true;
+    public $scheduleScanChecksums = true;
+    public $scheduleScanPermissions = true;
+    public $scheduleScanSettings = true;
+
     public $checksumIgnore = array(
         'plugins' => array('ignoreme/ignoreme.php'),
     );
+    public function userLevel()
+    {
+        return 'anonymous';
+    }
+
     public $checkpointInterval = '1 month';
 }
 
@@ -137,6 +175,18 @@ class MockApiClient
     public function getChecksums($type, $slug, $version)
     {
         return $this->arr[$type][$slug][$version];
+    }
+
+    public function getFile($type, $slug, $version, $file)
+    {
+        return array(
+            'response' => array(
+                'code' => $this->arr['response']['code'],
+                'message' => $this->arr['response']['message'],
+            ),
+            'body' => $this->arr['body'],
+            'headers' => $this->arr['headers'],
+        );
     }
 }
 
@@ -238,4 +288,49 @@ class MockProcess
 class MockFileDiff
 {
 
+}
+
+class MockTheme
+{
+    public function __construct($arr)
+    {
+        $this->arr = $arr;
+    }
+
+    public function get($name)
+    {
+        return $this->arr[$name];
+    }
+
+    public function __get($name)
+    {
+        return $this->arr[$name];
+    }
+}
+
+class MockUpdatePlugins
+{
+    public function __construct($arr)
+    {
+        $this->arr = $arr;
+        $this->checked = $arr['checked'];
+    }
+
+    public function __get($name)
+    {
+        return $this->arr[$name];
+    }
+}
+
+class WP_REST_Response
+{
+    public function __construct($data)
+    {
+        $this->data = $data;
+    }
+
+    public function header($name, $value)
+    {
+
+    }
 }

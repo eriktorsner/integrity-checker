@@ -30,7 +30,7 @@ define('INTEGRITY_CHECKER_ROOT', dirname(__DIR__));
 define('INTEGRITY_CHECKER_VERSION', '0.9.3');
 define('NONCE_SALT', 'h T/HR6HE{-wV-a!>$_5k,6;&L.Q-JGP;6mDU9vJ:{iD9qBo+hb}O)#]OkPP`Mei');
 
-function setUpWp()
+function setUpWp($downloadOnly = false)
 {
     global $testUrl;
 
@@ -70,8 +70,13 @@ function setUpWp()
         " --admin_email=admin@local.dev" .
         " --skip-email";
 
-    // Download and setup WordPress
+    // Download WordPress
     _exec("$wp --path=$path core download");
+    if ($downloadOnly) {
+        return;
+    }
+
+    // Configure and setup
     _exec("$wp --path=$path core config $configArgs");
     _exec("$wp --path=$path db reset --yes");
     _exec("$wp --path=$path core install $installArgs");
@@ -90,7 +95,7 @@ function setUpWp()
 
 function _exec($cmd)
 {
-    echo "$cmd\n";
+    //echo "$cmd\n";
     exec($cmd);
 }
 
@@ -99,5 +104,5 @@ function callPrivate($obj, $name, $args)
     $reflection = new \ReflectionClass(get_class($obj));
     $method = $reflection->getMethod($name);
     $method->setAccessible(true);
-    $method->invoke($obj, $args);
+    return $method->invoke($obj, $args);
 }

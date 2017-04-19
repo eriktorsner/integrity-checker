@@ -9,7 +9,6 @@ class ScanAllDBTest extends \PHPUnit_Framework_TestCase
 {
     public static function setUpBeforeClass()
     {
-        echo "*********  Setting up " . __CLASS__ . "\n\n";
         setUpWp();
     }
 

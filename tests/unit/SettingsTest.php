@@ -43,7 +43,7 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
 
         \WP_Mock::userFunction('get_transient', array(
             'args' => array('fooslug_accesslevel'),
-            'times' => 2,
+            'times' => 3,
             'return_in_order' => array('anonymous', false),
         ));
 

@@ -29,11 +29,9 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
         $ret = $this->restGet(
             $testUrl . '/wp-json/integrity-checker/v1/quota'
         );
-        print_r($ret);
 
         $this->assertTrue(isset($ret['body']));
         $body = $ret['body'];
-        print_r($body);
         $this->assertTrue(isset($body->code));
         $this->assertEquals('success', $body->code);
         $this->assertTrue(isset($body->data));
@@ -105,8 +103,6 @@ class RestFunctionalTest extends \PHPUnit_Framework_TestCase
                     'body' => json_encode((object)array('state' => 'started')),
                 )
             );
-
-            print_r($ret);
 
             $this->assertEquals(200, $ret['response']['code']);
             $body = $ret['body'];
