@@ -48,7 +48,7 @@ function iCheckBootstrap()
 
         $app = new integrityChecker\Pimple\Container();
         $app->register(new RuntimeProvider());
-        $iCheck = $app['interityChecker']; //new integrityChecker\integrityChecker(); //::getInstance();
+        $iCheck = $app['interityChecker'];
 
         add_action('init', array($iCheck, 'init'));
 
