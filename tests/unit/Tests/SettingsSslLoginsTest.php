@@ -22,6 +22,8 @@ class SettingsSslLoginsTest extends \PHPUnit_Framework_TestCase
     {
         define('FORCE_SSL_ADMIN', true);
 
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s     = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->sslLogins($dummy);
@@ -37,6 +39,8 @@ class SettingsSslLoginsTest extends \PHPUnit_Framework_TestCase
     {
         define('FORCE_SSL_ADMIN', false);
 
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s     = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->sslLogins($dummy);
@@ -50,6 +54,8 @@ class SettingsSslLoginsTest extends \PHPUnit_Framework_TestCase
      */
     public function testSslLogins3()
     {
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s     = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->sslLogins($dummy);

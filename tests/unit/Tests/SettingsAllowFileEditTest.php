@@ -22,6 +22,8 @@ class SettingsAllowFileEditTest extends \PHPUnit_Framework_TestCase
     {
         define('DISALLOW_FILE_EDIT', true);
 
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->allowFileEdit($dummy);
@@ -37,6 +39,8 @@ class SettingsAllowFileEditTest extends \PHPUnit_Framework_TestCase
     {
         define('DISALLOW_FILE_EDIT', false);
 
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->allowFileEdit($dummy);
@@ -50,6 +54,8 @@ class SettingsAllowFileEditTest extends \PHPUnit_Framework_TestCase
      */
     public function testAllowFileEdit3()
     {
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->allowFileEdit($dummy);

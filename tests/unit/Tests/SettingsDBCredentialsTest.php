@@ -7,7 +7,6 @@ class SettingsDBCredentialsTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         \WP_Mock::setUp();
-        \WP_Mock::wpPassthruFunction('__', 'a');
     }
 
     public function tearDown()
@@ -24,6 +23,8 @@ class SettingsDBCredentialsTest extends \PHPUnit_Framework_TestCase
         define('DB_USER', 'user');
         define('DB_NAME', 'wordpress');
         define('DB_HOST', 'localhost');
+
+        \WP_Mock::userFunction('get_option');
 
         $dummy = new \stdClass();
         $s = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
@@ -50,6 +51,9 @@ class SettingsDBCredentialsTest extends \PHPUnit_Framework_TestCase
         define('DB_USER', 'admin');
         define('DB_NAME', 'wordpress');
         define('DB_HOST', 'localhost');
+
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->dbCredentials($dummy);
@@ -71,6 +75,9 @@ class SettingsDBCredentialsTest extends \PHPUnit_Framework_TestCase
         define('DB_USER', 'admin');
         define('DB_NAME', 'USER');
         define('DB_HOST', 'localhost');
+
+        \WP_Mock::userFunction('get_option');
+
         $dummy = new \stdClass();
         $s = new Tests\Settings($dummy, $dummy, $dummy, $dummy);
         $s->dbCredentials($dummy);
