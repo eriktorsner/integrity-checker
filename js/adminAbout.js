@@ -87,6 +87,43 @@ jQuery(document).ready(function($) {
         );
     });
 
+    $('a.submitEmailBtnPopup').live('click', function (e) {
+        e.preventDefault();
+        var btn = $(this);
+        startSpin(btn);
+        var email = $('#submitEmailPopup').val();
+        var postData = {'email': email};
+
+        var msgElem = $('#submitEmailMessagePopup');
+        var errElem = $('#submitEmailMessagePopupErr');
+
+        putRest('/integrity-checker/v1/userdata' + '?esc=1', postData,
+            function (data) {
+                btn.html(btn.data('orgtxt'));
+                btn.prop("disabled", false);
+                if (data.data.status == 200) {
+                    msgElem.show();
+                    errElem.hide();
+                } else {
+                    msgElem.hide();
+                    errElem.show();
+                    errElem.html(data.data.message);
+                    errElem.removeClass('green');
+                    errElem.addClass('red');
+                }
+            }, function (data) {
+                btn.html(btn.data('orgtxt'));
+                btn.prop("disabled", false);
+                msgElem.hide();
+                errElem.show();
+                errElem.html(data.data.message);
+                errElem.removeClass('green');
+                errElem.addClass('red');
+            }
+        );
+    });
+
+
     $('a.termsLink').live('click', function (e) {
         e.preventDefault();
         var html = $('#termsText').html();
@@ -100,6 +137,9 @@ jQuery(document).ready(function($) {
             maxHeight     : height*0.9,
             position      : { my: "top", at: "top", of: $(window) },
             closeOnEscape : true,
+            open          : function() {
+                $(".ui-dialog-content").scrollTop(0);
+            },
             buttons       : {
                 "Close": function () {
                     $(this).dialog('close');
@@ -108,6 +148,23 @@ jQuery(document).ready(function($) {
         });
         var contentTop = $(content).offset().top;
         $('html, body').animate({scrollTop: contentTop - 50}, 100);
+        $(".wp-dialog").scrollTop("0")
     });
 
+    $('a.registerNowLink').live('click', function (e) {
+        e.preventDefault();
+        var html = $('#registerEmailPopup');
+        html.dialog({
+            dialogClass: 'wp-dialog',
+            modal      : true,
+            width      : 400,
+            height     : 400,
+            closeOnEscape: true,
+            buttons: {
+                "Close": function () {
+                    $(this).dialog('close');
+                }
+            }
+        });
+    });
 });

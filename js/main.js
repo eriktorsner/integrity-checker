@@ -76,11 +76,19 @@ jQuery(document).ready(function($) {
             args.contentType = 'application/json';
         }
 
-        $.ajax(args).then(function(data) {
-            f(data);
-        }, function (data) {
-            if (fError) fError(data);
-        });
+        $.ajax(args)
+            .done(function(data, textStatus, request) {
+                f(data, textStatus, request);
+            })
+            .fail(function(data) {
+                if (fError) {
+                    data = data.responseJSON;
+                    fError(data);
+                }
+            })
+            .always(function(data) {
+                i = 0;
+            });
     };
 
     accessLevelAdjust = function() {
@@ -109,11 +117,15 @@ jQuery(document).ready(function($) {
         }
     };
 
-    tabSwitch();
-    renderChecksumScanResults();
-    renderFilesScanResults();
-    renderSettingsScanResults();
     accessLevelAdjust();
+    tabSwitch();
+
+    getProcessStatus(null, function() {
+        renderChecksumScanResults();
+        renderFilesScanResults();
+        renderSettingsScanResults();
+    });
+
 
     $('a.itemIssuesToggle').live('click', function(e) {
         var slug = $(this).data('slug');
@@ -143,12 +155,10 @@ jQuery(document).ready(function($) {
         var url = '/integrity-checker/v1/diff/'+type+'/'+slug;
         getRest(
             url,
-            function(data) {
-                showDiff(data);
+            function(data, textStatus, request) {
+                showDiff(data, textStatus, request);
             },
-            function(data) {
-                showDiffError(data);
-            },
+            false,
             {'X-Filename': file}
         );
     });
@@ -234,10 +244,11 @@ jQuery(document).ready(function($) {
         var scanSummary = $('#settings-scan-summary');
         var scanResults = $('#settings-scan-results');
 
-        getRest('/integrity-checker/v1/process/status/settings' + '?esc=1', function (data) {
+        //getRest('/integrity-checker/v1/process/status/settings' + '?esc=1', function (data) {
+        getProcessStatus('settings', function(data) {
             scanSummary.html('');
             var summaryTmpl = wp.template('settingsSummaryTmpl');
-            $('<div></div>').html(summaryTmpl(data.data)).appendTo(scanSummary);
+            $('<div></div>').html(summaryTmpl(data)).appendTo(scanSummary);
         });
 
         getRest('/integrity-checker/v1/testresult/settings' + '?esc=1', function (data) {
@@ -269,10 +280,11 @@ jQuery(document).ready(function($) {
         var scanPermResults = $('#files-ownerandpermission-scan-results');
         var scanMonitorResults = $('#files-monitor-scan-results');
 
-        getRest('/integrity-checker/v1/process/status/files' + '?esc=1', function (data) {
+        //getRest('/integrity-checker/v1/process/status/files' + '?esc=1', function (data) {
+        getProcessStatus('files', function(data) {
             scanSummary.html('');
             var summaryTmpl = wp.template('filesSummaryTmpl');
-            $('<div></div>').html(summaryTmpl(data.data)).appendTo(scanSummary);
+            $('<div></div>').html(summaryTmpl(data)).appendTo(scanSummary);
         });
 
         getRest('/integrity-checker/v1/testresult/files' + '?esc=1', function (data) {
@@ -328,10 +340,10 @@ jQuery(document).ready(function($) {
         var scanSummary = $('#checksum-scan-summary');
         var scanResults = $('#checksum-scan-results');
 
-        getRest('/integrity-checker/v1/process/status/checksum' + '?esc=1', function (data) {
+        getProcessStatus('checksum', function(data) {
             scanSummary.html('');
             var summaryTmpl = wp.template('checksumSummaryTmpl');
-            $('<div></div>').html(summaryTmpl(data.data)).appendTo(scanSummary);
+            $('<div></div>').html(summaryTmpl(data)).appendTo(scanSummary);
         });
 
         getRest('/integrity-checker/v1/testresult/checksum' + '?esc=1', function (data) {
@@ -380,29 +392,64 @@ jQuery(document).ready(function($) {
     }
 
     /**
+     *
+     * @param process
+     * @param f
+     */
+    function getProcessStatus(process, f) {
+        now = Math.round(+new Date()/1000);
+        if (processStatus && processStatus.ts < (now + 15)) {
+            if (f) f(processStatus.data[process]);
+            return;
+        }
+
+        getRest('/integrity-checker/v1/process/status?esc=1', function (data) {
+            data.ts = now;
+            processStatus = data;
+            if (f) f(processStatus.data[process]);
+        });
+    }
+
+
+    /**
      * Show diff in a popup
      *
      * @param diff The HTML to dislpay
      */
-    function showDiff(diff) {
+    function showDiff(diff, textStatus, request) {
+        if ((typeof diff === 'object') && (diff !== null)) {
+            showDiffError(diff);
+            return;
+        }
         if (diff.length == 0) {
-            var data = { 'responseJSON': {
+            var data = {
                 'code': 200,
                 'message': 'Diff is just white space'
-            }};
+            };
             showDiffError(data);
             return;
         }
         var content = $(diff);
         var height = $(window).height();
+        var title = 'Diff';
+
+        if (typeof request === 'object' && request !== null) {
+            remainingDiffs = request.getResponseHeader('x-integrity-checker-diff-remain');
+            if (remainingDiffs && remainingDiffs != '-1') {
+                title = title + ' - ' + remainingDiffs + ' diff request(s) remaining';
+                //title = title + ' <i class="fa fa-info-circle blue diff-quota-info"></i>'
+            }
+        }
+
         content.dialog({
-            dialogClass   :'wp-dialog',
+            dialogClass   : 'wp-dialog',
             modal         : true,
             closeOnEscape : true,
             width         : $(window).width()*0.93,
             height        : height*0.9,
             maxHeight     : height*0.9,
             position      : { my: "top", at: "top", of: $(window) },
+            dialogClass   : 'integrity-checker-filediff',
             buttons       : {
                 "Close": function () {
                     $(this).dialog('close');
@@ -410,6 +457,8 @@ jQuery(document).ready(function($) {
             },
             'close'        : function() { content.remove(); }
         });
+
+        $('.integrity-checker-filediff div span').html(title);
         var contentTop = $(content).offset().top;
         $('html, body').animate({scrollTop: contentTop - 50}, 100);
     }
@@ -421,8 +470,7 @@ jQuery(document).ready(function($) {
      */
     function showDiffError(data) {
         var diffErrorTmpl = wp.template('diffErrorTmpl');
-        var response = data.responseJSON;
-        var content = $(diffErrorTmpl(response));
+        var content = $(diffErrorTmpl(data));
         content.dialog({
             dialogClass   :'wp-dialog',
             modal         : true,
@@ -504,7 +552,7 @@ jQuery(document).ready(function($) {
  */
 var rest, getRest, putRest, postRest;
 var accessLevelAdjust;
-//var fileScanPermissionsData, fileScanModifiedFilesData;
+var processStatus;
 
 
 /**

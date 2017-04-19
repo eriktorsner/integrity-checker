@@ -8,10 +8,10 @@ jQuery(document).ready(function($) {
         var scheduledScansTmpl = wp.template('scheduledScansTmpl');
         $('<div></div>').html(scheduledScansTmpl()).appendTo(schedule);
 
-        var alerts = $('#alertSettings');
+        /*var alerts = $('#alertSettings');
         alerts.html('');
         var alertsTmpl = wp.template('alertsTmpl');
-        $('<div></div>').html(alertsTmpl()).appendTo(alerts);
+        $('<div></div>').html(alertsTmpl()).appendTo(alerts);*/
 
         var files = $('#filesSettings');
         files.html('');
