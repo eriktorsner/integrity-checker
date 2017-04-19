@@ -8,11 +8,13 @@ namespace integrityChecker\Admin;
 class FilesScanTab extends BaseTab
 {
     /**
-     * PermissionsScanTab constructor.
+     * FilesScanTab constructor.
      *
      */
-    public function __construct()
+    public function __construct($settings)
     {
+        parent::__construct($settings);
+
         $this->tabId = 'files';
         $this->name = __('Files','integrity-checker');
     }

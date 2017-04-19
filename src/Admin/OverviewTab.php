@@ -10,9 +10,12 @@ class OverviewTab extends BaseTab
     /**
      * ChecksumScanTab constructor.
      *
+     * @param \integrityChecker\Settings $settings
      */
-    public function __construct()
+    public function __construct($settings)
     {
+        parent::__construct($settings);
+
         $this->tabId = 'generaloptions';
         $this->name = __('Overview','integrity-checker');
     }

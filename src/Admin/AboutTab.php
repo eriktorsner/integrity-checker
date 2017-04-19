@@ -10,9 +10,12 @@ class AboutTab extends BaseTab
     /**
      * AboutTab constructor.
      *
+     * @param \integrityChecker\Settings $settings
      */
-    public function __construct()
+    public function __construct($settings)
     {
+        parent::__construct($settings);
+
         $this->tabId = 'about';
         $this->name = __('About','integrity-checker');
     }

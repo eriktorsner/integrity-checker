@@ -9,11 +9,13 @@ class SettingsScanTab extends BaseTab
 {
 
     /**
-     * AboutTab constructor.
+     * SettingsScanTab constructor.
      *
+     * @param \integrityChecker\Settings $settings
      */
-    public function __construct()
+    public function __construct($settings)
     {
+        parent::__construct($settings);
         $this->tabId = 'settingscscan';
         $this->name = __('Misc checks','integrity-checker');
     }
