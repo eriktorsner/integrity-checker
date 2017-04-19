@@ -27,6 +27,7 @@
         <whitelist>
             <directory>src</directory>
             <exclude>
+                <directory>src/Admin/views</directory>
                 <directory>src/Diff</directory>
                 <directory>src/Cron</directory>
                 <directory>src/Pimple</directory>
