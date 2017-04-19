@@ -56,12 +56,13 @@ class AdminPage {
 
         if (isset($_REQUEST['page']) && $_REQUEST['page'] == $this->key) {
             $this->tabs = array(
-                new OverviewTab($this->settings),
+                //new OverviewTab($this->settings),
                 new ChecksumScanTab($this->settings),
                 new FilesScanTab($this->settings),
                 new SettingsScanTab($this->settings),
                 new SettingsTab($this->settings),
                 new AboutTab($this->settings),
+                new UpgradeTab($this->settings),
             );
         }
     }
