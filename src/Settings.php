@@ -307,11 +307,7 @@ class Settings
         if (!$ret) {
             $ret = 'anonymous';
             $quotaInfo = $this->apiClient->getQuota();
-            if ($quotaInfo) {
-                $ret = isset($quotaInfo->access) ? $quotaInfo->access : $ret;
-            }
-
-            set_transient($this->slug . '_accesslevel', $ret, 86400);
+            $ret = get_transient($this->slug . '_accesslevel');
         }
 
         return $ret;
