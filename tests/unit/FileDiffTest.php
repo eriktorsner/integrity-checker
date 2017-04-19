@@ -11,6 +11,7 @@ class FileDiffTest extends \PHPUnit_Framework_TestCase
     {
         // Download wp ($downloadOnly = true)
         setUpWp(true);
+        require_once __DIR__ . '/../MockWpRestResponse.php';
     }
     public function setUp()
     {
