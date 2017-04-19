@@ -41,17 +41,6 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
             ));
         }
 
-        \WP_Mock::userFunction('get_transient', array(
-            'args' => array('fooslug_accesslevel'),
-            'times' => 3,
-            'return_in_order' => array('anonymous', false),
-        ));
-
-        \WP_Mock::userFunction('set_transient', array(
-            'args' => array('fooslug_accesslevel', 'anonymous', 86400),
-            'times' => 1,
-        ));
-
         $apiClient = new \MockApiClient(array());
         $settings = new Settings('fooslug', $apiClient);
         foreach ($settingParameters as $name => $parameter) {
