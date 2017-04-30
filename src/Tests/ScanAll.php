@@ -19,6 +19,10 @@ class ScanAll extends BaseTest
      */
     public $name = 'scanall';
 
+    /**
+     * @var array
+     */
+    private $ignorePatterns;
 
     /**
      * @param $request
@@ -45,8 +49,6 @@ class ScanAll extends BaseTest
      */
     public function scan($job)
     {
-        global $wpdb;
-
         $scanStart = time();
         $this->transientState = array('scanStart' => $scanStart);
 
@@ -57,9 +59,14 @@ class ScanAll extends BaseTest
         // to safely scan in one go on weaker servers. We need to divide the work
         $subFolders = $this->rglob(ABSPATH, '*', GLOB_ONLYDIR, $this->settings->followSymlinks);
 
-
         $newJobs = array();
         foreach ($subFolders as $folder) {
+
+            foreach ($this->getIgnorePatterns() as $ignorePattern) {
+                if (fnmatch($ignorePattern, $folder)) {
+                    continue;
+                }
+            }
 
             $newJobs[] = (object)array(
                 'class' => $this->name,
@@ -112,6 +119,7 @@ class ScanAll extends BaseTest
         $checkSummer->includeOwner = true;
         $checkSummer->recursive = $recursive;
         $checkSummer->followSymlinks = $this->settings->followSymlinks;
+
         $files = $checkSummer->scan();
 
         $this->storeScanData($files);
@@ -184,7 +192,7 @@ class ScanAll extends BaseTest
         foreach ($files->checksums as $name => $info) {
 
             $existing = $wpdb->get_row($wpdb->prepare(
-               "select id, name, version, hash, mode, fileowner, filegroup FROM $tableName WHERE name=%s " .
+               "select id, name, version, hash, mode, fileowner, filegroup, deleted FROM $tableName WHERE name=%s " .
                "ORDER BY version desc LIMIT 0,1",
                 array($name)
             ));
@@ -195,7 +203,8 @@ class ScanAll extends BaseTest
                 $changed = $existing->hash != $info->hash
                             || $existing->fileowner != $info->owner
                             || $existing->filegroup != $info->group
-                            || $existing->mode != (int)$info->mode;
+                            || $existing->mode != (int)$info->mode
+                            || $existing->deleted < $scanStart;
             }
 
             if (!$existing || $changed) {
@@ -228,5 +237,18 @@ class ScanAll extends BaseTest
                 $scanStart
             ));
         }
+    }
+
+    private function getIgnorePatterns()
+    {
+        if (is_null($this->ignorePatterns)) {
+            $this->ignorePatterns = explode("\n", $this->settings->fileIgnoreFolders);
+
+            foreach ($this->ignorePatterns as &$ignorePattern) {
+                $ignorePattern = ABSPATH . $ignorePattern;
+            }
+        }
+
+        return $this->ignorePatterns;
     }
 }
