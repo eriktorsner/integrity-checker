@@ -148,7 +148,7 @@ class ApiClient
     {
         $ret = $this->getQuota($apiKey);
         if ($this->lastError === 0) {
-            update_option('wp_checksum_apikey', $apiKey);
+            update_option('integrity-checker_apikey', $apiKey);
             $ret->message = __('API key updated', 'integrity-checker');
             return true;
         }
@@ -328,7 +328,7 @@ class ApiClient
     private function getApiKey()
     {
         // does this WP installation have a key?
-        $apiKey = get_option('wp_checksum_apikey', false);
+        $apiKey = get_option('integrity-checker_apikey', false);
         if ($apiKey ) {
             return $apiKey;
         }
@@ -340,13 +340,13 @@ class ApiClient
                 'X-Checksum-Client' => 'integrity-checker; ' . INTEGRITY_CHECKER_VERSION,
             ),
         );
-        $out = wp_remote_post($url);
+        $out = wp_remote_post($url, $args);
         $this->updateSiteId($out);
         if ($out['response']['code'] == 200) {
             $ret = json_decode($out['body']);
             if ($ret && isset($ret->apikey)) {
                 $apiKey = $ret->apikey;
-                update_option('wp_checksum_apikey', $apiKey);
+                update_option('integrity-checker_apikey', $apiKey);
 
                 return $apiKey;
             }
@@ -374,10 +374,9 @@ class ApiClient
         $headers = $objHeaders->get_headers()->getAll();
 
         if (isset($headers['x-checksum-site-id'])) {
-            $currentId = get_option('wp_checksum_siteid', false);
+            $currentId = get_option('integrity-checker_siteid', false);
             if ($currentId != $headers['x-checksum-site-id']) {
-                update_option('wp_checksum_siteid', $headers['x-checksum-site-id']);
-                // copy site settings to new site...
+                update_option('integrity-checker_siteid', $headers['x-checksum-site-id']);
             }
         }
     }
@@ -396,7 +395,7 @@ class ApiClient
             'Authorization' => $apiKey,
             'X-Checksum-Client' => 'integrity-checker; ' . INTEGRITY_CHECKER_VERSION,
         );
-        $siteId = get_option('wp_checksum_siteid', false);
+        $siteId = get_option('integrity-checker_siteid', false);
         if ($siteId) {
             $ret['X-Checksum-Site-Id'] = $siteId;
         }
