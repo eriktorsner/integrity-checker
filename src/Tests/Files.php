@@ -43,7 +43,7 @@ class Files extends BaseTest
         $limit = 900;
         $payload = json_decode($request->get_body());
         if (isset($payload->source) && $payload->source == 'manual') {
-            $limit = 10;
+            $limit = 0;
         }
 
         // This test depends on scanAll
@@ -213,15 +213,13 @@ class Files extends BaseTest
                 'date'   => date('Y-m-d H:i:s', $row->modified),
                 'size'   => $row->size,
                 'issue' => join(' + ', $reasons),
+                'level' => substr_count($row->name, DIRECTORY_SEPARATOR)
             );
         }
 
         usort($files, function($a, $b) {
-            $cntA = substr_count($a->file, DIRECTORY_SEPARATOR);
-            $cntB = substr_count($b->file, DIRECTORY_SEPARATOR);
-
-            $aa = (($a->isDir || $cntA > 0) ? '1':'0') . $a->file;
-            $bb = (($b->isDir || $cntB > 0) ? '1':'0') . $b->file;
+            $aa = (($a->isDir || $a->level > 0) ? '1':'0') . $a->file;
+            $bb = (($b->isDir || $b->level > 0) ? '1':'0') . $b->file;
 
             return strcasecmp($aa, $bb);
         });
@@ -282,16 +280,14 @@ class Files extends BaseTest
                     'date'   => date('Y-m-d H:i:s', $row->modified),
                     'size'   => $row->size,
                     'issue' => $changeType,
+                    'level' => substr_count($row->name, DIRECTORY_SEPARATOR),
                 );
             }
         }
 
         usort($files, function($a, $b) {
-            $cntA = substr_count($a->file, DIRECTORY_SEPARATOR);
-            $cntB = substr_count($b->file, DIRECTORY_SEPARATOR);
-
-            $aa = (($a->isDir || $cntA > 0) ? '1':'0') . $a->file;
-            $bb = (($b->isDir || $cntB > 0) ? '1':'0') . $b->file;
+            $aa = (($a->isDir || $a->level > 0) ? '1':'0') . $a->file;
+            $bb = (($b->isDir || $b->level > 0) ? '1':'0') . $b->file;
 
             return strcasecmp($aa, $bb);
         });
