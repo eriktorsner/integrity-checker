@@ -154,7 +154,7 @@ jQuery(document).ready(function($) {
                 'folderMasks': $('input[name="folderMasks"]').val(),
                 'fileOwners': $('input[name="fileOwners"]').val(),
                 'fileGroups': $('input[name="fileGroups"]').val(),
-                'checkpointInterval': $('select[name="checkpointInterval"]').val()
+                'fileIgnoreFolders': $('select[name="fileIgnoreFolders"]').val()
             },
             function(data) {
                 $('input[name="maxFileSize"]').val(data.data.maxFileSize);
@@ -163,7 +163,7 @@ jQuery(document).ready(function($) {
                 $('input[name="folderMasks"]').val(data.data.folderMasks);
                 $('input[name="fileOwners"]').val(data.data.fileOwners);
                 $('input[name="fileGroups"]').val(data.data.fileGroups);
-                $('input[name="checkpointInterval"]').val(data.data.checkpointInterval);
+                $('input[name="fileIgnoreFolders"]').val(data.data.fileIgnoreFolders);
 
                 $('.saveFileSettingsOk').show();
             },
