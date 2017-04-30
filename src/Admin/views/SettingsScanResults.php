@@ -1,5 +1,5 @@
-<div id="settings-scan-summary" class="scan-summary"></div>
-<div id="settings-scan-results" class="scan-results"></div>
+<div id="settings-scan-summary" class="scan-summary div-loading"></div>
+<div id="settings-scan-results" class="scan-results div-loading"></div>
 
 <!-- wp-util templates -->
 <script type="text/html" id="tmpl-settingsSummaryTmpl">

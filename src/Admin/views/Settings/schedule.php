@@ -7,11 +7,11 @@
             <?php _e("You are using an anonymous API key that was generated for you when you first installed" .
                      "Integrity Checker. To enable scheduled scans, you need to register your email address or " .
                      "upgrade to a paid package", "integrity-checker");?>
-            <br><?php _e("Bor basic scheduling, register your email address, go to the ", "integrity-checker");?>
-            <a href="tools.php?page=integrity-checker_options&tab=tab-about">
-                <?php _e("About tab", "integrity-checker");?>
+            <br><br><?php _e("To enable basic/monthly scheduling, register your email address on to the ", "integrity-checker");?>
+            <a href="tools.php?page=integrity-checker_options&tab=tab=tab-upgrade">
+                <?php _e("Upgrade tab", "integrity-checker");?>
             </a>
-            <br><?php _e("For more frequent scheduling and more features, visit our ", "integrity-checker");?>
+            <br><?php _e("For more frequent scheduling, premium support and more features, visit our ", "integrity-checker");?>
             <a target="_blank" href="https://www.wpessentials.io/plugins/integrity-checker/?utm_source=integrity-checker-free&utm_medium=web&utm_content=tab-about">
                 <?php _e("plugin home page", "integrity-checker");?>
             </a>

@@ -1,5 +1,5 @@
-<div id="checksum-scan-summary" class="scan-summary"></div>
-<div id="checksum-scan-results" class="scan-results"></div>
+<div id="checksum-scan-summary" class="scan-summary div-loading"></div>
+<div id="checksum-scan-results" class="scan-results div-loading"></div>
 
 
 <script type="text/html" id="tmpl-checksumSummaryTmpl">

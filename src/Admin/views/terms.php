@@ -35,7 +35,7 @@
     We offer various paid yearly subscriptions starting at $39 USD for one site. Paid subscriptions for Integrity Checker are only restricted in terms of the number of sites. Free and unlimited scheduling, file diff requests and naturally access to alternate hashes. The terms of API usage for these commercial offerings are defined for each different package.
 </p>
 <p>
-    Please visit <a href="https://www.wpessentials.io/plugins/integrity-checker/" target="_blank">https://www.wpessentials.io/plugins/integrity-checker/</a> for more information.
+    Please visit <a href="https://www.wpessentials.io/product/integrity-checker-subscription/" target="_blank">https://www.wpessentials.io/product/integrity-checker-subscription/</a> for more information.
 </p>
 <br><br><br>
 

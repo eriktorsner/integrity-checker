@@ -92,7 +92,8 @@ $cols = 2;
                                 array('text' => 'Premium support'),
                             ),
                             'linkText' => 'Buy now',
-                            'link' => 'https://www.wpessentials.io/product-category/integrity-checker/',
+                            'link' => 'https://www.wpessentials.io/product/integrity-checker-subscription/',
+                            'linkClass' => '',
                         );
                         include __DIR__ . '/Upgrade/column.php';
                         ?>

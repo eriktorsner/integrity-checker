@@ -1,6 +1,6 @@
-<div id="files-scan-summary" class="scan-summary"></div>
-<div id="files-monitor-scan-results" class="scan-results"></div>
-<div id="files-ownerandpermission-scan-results" class="scan-results"></div>
+<div id="files-scan-summary" class="scan-summary div-loading"></div>
+<div id="files-monitor-scan-results" class="scan-results div-loading"></div>
+<div id="files-ownerandpermission-scan-results" class="scan-results div-loading"></div>
 
 <!-- wp-util templates -->
 <script type="text/html" id="tmpl-filesSummaryTmpl">

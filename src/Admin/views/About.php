@@ -47,8 +47,8 @@ $strDiagnostic = $diagnostic->get();
 	?>
 	<br>
 	<input type="text" style="width: 50%;" id="apikey"
-	       value="<?php echo get_option('wp_checksum_apikey', '[NO KEY]'); ?>"
-	       data-original="<?php echo get_option('wp_checksum_apikey', '[NO KEY]'); ?>">
+	       value="<?php echo get_option($this->settings->slug .'_apikey', '[NO KEY]'); ?>"
+	       data-original="<?php echo get_option($this->settings->slug .'_apikey', '[NO KEY]'); ?>">
 	<a class="button-primary updateApiKey">
 		<?php _e('Submit', 'integrity-checker' ) ?>
 	</a>

@@ -107,6 +107,28 @@ $intervals = array(
         </tr>
 
         <tr>
+            <th><?php _e('Ignore folders', 'integrity-checker');?></th>
+            <td>
+                <textarea name="fileIgnoreFolders" type="text" rows="5" cols="55"><?php echo $this->settings->fileIgnoreFolders?></textarea>
+                <br>
+                <i>
+                    <?php _e(
+                        'Enter one or more wild card patterns to indicate folders relative to the WordPress root ' .
+                        'folder that the file scanner should ignore. ' .
+                        'Each pattern on a separate row. Use standard shell wild card characters like * and ' .
+                        '?. <br>Default value: wp-content/cache*',
+                        'integrity-checker'
+                    )?>
+                    <br><br>
+                    <?php _e('Your current installation root is:', 'integrity-checker'); ?>
+                    <code><?php echo ABSPATH ?></code>
+                </i>
+            </td>
+        </tr>
+
+        wp-content/cache/
+
+        <tr>
             <th></th>
             <td>
                 <a class="button-primary saveFileSettings access-registered access-paid">
