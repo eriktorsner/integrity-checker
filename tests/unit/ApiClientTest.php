@@ -311,10 +311,10 @@ class ApiClientTest extends \PHPUnit_Framework_TestCase
             'return_in_order' => array('abc123', false),
         ));
         \WP_Mock::userFunction('update_option', array(
-            'args' => array('wp_checksum_siteid', 'foobar-123'),
+            'args' => array('integrity-checker_siteid', 'foobar-123'),
         ));
         \WP_Mock::userFunction('update_option', array(
-            'args' => array('wp_checksum_apikey', 'abc123'),
+            'args' => array('integrity-checker_apikey', 'abc123'),
         ));
 
         \WP_Mock::userFunction('is_wp_error', array(

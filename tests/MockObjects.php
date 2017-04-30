@@ -105,6 +105,7 @@ class MockSettings
     public $scheduleScanChecksums = true;
     public $scheduleScanPermissions = true;
     public $scheduleScanSettings = true;
+    public $fileIgnoreFolders = '';
 
     public $checksumIgnore = array(
         'plugins' => array('ignoreme/ignoreme.php'),
@@ -319,5 +320,28 @@ class MockUpdatePlugins
     public function __get($name)
     {
         return $this->arr[$name];
+    }
+}
+
+class MockWpApi
+{
+    public function __construct($arr)
+    {
+        $this->arr = $arr;
+    }
+
+    public function getWpVersion()
+    {
+        return $this->arr['version'];
+    }
+
+    public function getAbsPath()
+    {
+        return $this->arr['abspath'];
+    }
+
+    public function getPluginsPath()
+    {
+        return $this->arr['pluginspath'];
     }
 }

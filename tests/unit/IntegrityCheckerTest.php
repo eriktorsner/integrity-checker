@@ -39,6 +39,12 @@ class IntegrityCheckerTest extends \PHPUnit_Framework_TestCase
             'times' => 2,
         ));
 
+        \WP_Mock::userFunction('get_option', array(
+            'args' => array('integrity-checker_version', '0.0.1'),
+            'return' => '0.10.0',
+            'times' => 2,
+        ));
+
         $settings = new \MockSettings();
         $adminUiHooks = new \MockAdminUiHooks();
         $adminPage = new \MockAdminPage();
@@ -73,6 +79,13 @@ class IntegrityCheckerTest extends \PHPUnit_Framework_TestCase
             'return' => 0.2,
             'times' => 1,
         ));
+
+        \WP_Mock::userFunction('get_option', array(
+            'args' => array('integrity-checker_version', '0.0.1'),
+            'return' => '0.10.0',
+            'times' => 1,
+        ));
+
 
         $wpdb = \Mockery::mock( '\WPDB' );
         $wpdb->prefix = 'wp_';

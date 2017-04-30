@@ -31,21 +31,27 @@ class StateTest extends \PHPUnit_Framework_TestCase
             'times' => 2,
         ));
 
+        \WP_Mock::userFunction('get_option', array(
+            'args' => array('gmt_offset', 0),
+            'return' => 2,
+            'times' => 2,
+        ));
+
         $state = new State('foobar');
         $testState = $state->getTestState('footest');
 
         $this->assertEquals('never_started', $testState->state);
         $this->assertEquals(null, $testState->started);
         $this->assertEquals(null, $testState->finished);
-        $this->assertEquals('1970-01-01 00:00:00', $testState->startedIso);
-        $this->assertEquals('1970-01-01 00:00:00', $testState->finishedIso);
+        $this->assertEquals('1970-01-01 02:00:00', $testState->startedIso);
+        $this->assertEquals('1970-01-01 02:00:00', $testState->finishedIso);
 
         $testState = $state->getTestState('footest');
         $this->assertEquals('finished', $testState->state);
         $this->assertEquals($t - 200, $testState->started);
         $this->assertEquals($t - 100, $testState->finished);
-        $this->assertEquals(date('Y-m-d H:i:s', $t - 200), $testState->startedIso);
-        $this->assertEquals(date('Y-m-d H:i:s', $t - 100), $testState->finishedIso);
+        $this->assertEquals(date('Y-m-d H:i:s', $t - 200 + (3600*2)), $testState->startedIso);
+        $this->assertEquals(date('Y-m-d H:i:s', $t - 100 + (3600*2)), $testState->finishedIso);
     }
 
     public function testUpdateTestState()

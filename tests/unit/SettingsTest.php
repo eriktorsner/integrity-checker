@@ -30,6 +30,7 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
             'fileGroups' => array('option' => 'file_groups', 'type' => 'string', 'default' => null),
             'maxFileSize' => array('option' => 'max_file_size', 'type' => 'num', 'default' => 2),
             'followSymlinks' => array('option' => 'follow_symlinks', 'type' => 'num', 'default' => 0),
+            'fileIgnoreFolders' => array('option' => 'file_ignore_folders', 'type' => 'string', 'default' => 'wp-content/cache*'),
             'checksumIgnore' => array('option' => 'checksum_ignore', 'type' => 'arr', 'default' => array()),
         );
 
@@ -40,6 +41,14 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
                 'return' => $parameter['default'],
             ));
         }
+
+        \WP_Mock::userFunction('get_transient', array(
+            'args' => array('fooslug_accesslevel'),
+            'times' => 2,
+            'return' => 'anonymous',
+        ));        
+
+        
 
         $apiClient = new \MockApiClient(array());
         $settings = new Settings('fooslug', $apiClient);
@@ -128,6 +137,7 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
             'fileGroups' => array('option' => 'file_groups', 'type' => 'string', 'default' => null),
             'maxFileSize' => array('option' => 'max_file_size', 'type' => 'num', 'default' => 2),
             'followSymlinks' => array('option' => 'follow_symlinks', 'type' => 'num', 'default' => 0),
+            'fileIgnoreFolders' => array('option' => 'file_ignore_folders', 'type' => 'string', 'default' => 'wp-content/cache*'),
             'checksumIgnore' => array('option' => 'checksum_ignore', 'type' => 'arr', 'default' => array()),
         );
 
