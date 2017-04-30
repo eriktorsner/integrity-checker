@@ -13,13 +13,19 @@ class FileDiff
     private $apiClient;
 
     /**
+     * @var WPApi
+     */
+    private $wpApi;
+
+    /**
      * FileDiff constructor.
      *
      * @param ApiClient $apiClient
      */
-    public function __construct($apiClient)
+    public function __construct($apiClient, $wpApi)
     {
         $this->apiClient = $apiClient;
+        $this->wpApi = $wpApi;
     }
 
     /**
@@ -104,13 +110,10 @@ class FileDiff
      */
     private function getCoreFiles($file)
     {
-        global $wp_version;
-        require_once ABSPATH . WPINC . '/version.php';
-
-        $localFile = ABSPATH . '/' . $file;
+        $localFile = $this->wpApi->getAbsPath() . $file;
         $localFileContent = file_get_contents($localFile);
 
-        $remoteFile = $this->apiClient->getFile('core', 'core', $wp_version, $file);
+        $remoteFile = $this->apiClient->getFile('core', 'core', $this->wpApi->getWpVersion(), $file);
 
         return (object)array(
             'local' => $localFileContent,
@@ -178,9 +181,9 @@ class FileDiff
      *
      * @return bool|object
      */
-    private function getPluginInfo($slug)
+    private  function getPluginInfo($slug)
     {
-        require_once ABSPATH . '/wp-admin/includes/plugin.php';
+        require_once $this->wpApi->getAbsPath() . 'wp-admin/includes/plugin.php';
         $plugins = get_plugins();
         foreach ($plugins as $id => $plugin) {
             $parts = explode('/', $id);
@@ -189,7 +192,7 @@ class FileDiff
                 return (object)array(
                     'slug' => $slug,
                     'version' => $plugin['Version'],
-                    'root' => WP_PLUGIN_DIR . '/' . $slug,
+                    'root' => $this->wpApi->getPluginsPath() . '/' . $slug,
                 );
             }
         }
@@ -206,7 +209,7 @@ class FileDiff
      */
     private function getThemeInfo($slug)
     {
-        require_once ABSPATH.'/wp-admin/includes/file.php';
+        require_once $this->wpApi->getAbsPath() .'wp-admin/includes/file.php';
         $themes = wp_get_themes();
         foreach ($themes as $themeSlug => $theme) {
             if ($slug == $themeSlug) {
@@ -221,4 +224,5 @@ class FileDiff
 
         return false;
     }
+
 }
