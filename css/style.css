@@ -45,7 +45,6 @@ body.tools_page_integrity-checker_options .integrity-checker-puff-content h3 {
     }
 }
 
-
 body.tools_page_integrity-checker_options .integrity-checker-header .puff {
     margin-left: 50%;
 }
@@ -53,6 +52,24 @@ body.tools_page_integrity-checker_options .integrity-checker-header .puff {
 body.tools_page_integrity-checker_options .nav-tab-wrapper {
     clear: both;
 }
+
+body.tools_page_integrity-checker_options .div-loading {
+    background: url(../images/spinner-2x.gif) no-repeat center;
+    opacity: 0.8;
+}
+
+body.tools_page_integrity-checker_options #checksum-scan-summary,
+body.tools_page_integrity-checker_options #files-scan-summary,
+body.tools_page_integrity-checker_options #settings-scan-summary {
+    min-height: 60px;
+}
+body.tools_page_integrity-checker_options #checksum-scan-results,
+body.tools_page_integrity-checker_options #files-monitor-scan-results,
+body.tools_page_integrity-checker_options #files-ownerandpermission-scan-results,
+body.tools_page_integrity-checker_options #settings-scan-results {
+    min-height: 218px;
+}
+
 
 body.tools_page_integrity-checker_options .scanStatus {
     display: inline;
