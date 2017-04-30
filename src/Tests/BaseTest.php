@@ -251,13 +251,14 @@ class BaseTest
             if (is_link($trimmed)) {
                 if (!$followSymlinks) {
                     // remove it from the files array
-                    if(($key = array_search($path, $files)) !== false) {
+                    if(($key = array_search($trimmed, $files)) !== false) {
                         unset($files[$key]);
                     }
                     // and don't recurse into any sub folders.
                     continue;
                 }
 
+                // Avoid recursion
                 $link = readlink($trimmed);
                 if (in_array($link, $links)) {
                     continue;
