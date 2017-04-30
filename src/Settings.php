@@ -78,6 +78,11 @@ class Settings
     private $fileGroups;
 
     /**
+     * @var string
+     */
+    private $fileIgnoreFolders;
+
+    /**
      * @var array
      */
     private $checksumIgnore;
@@ -125,6 +130,11 @@ class Settings
             'maxFileSize' => array('option' => 'max_file_size', 'type' => 'num', 'default' => 2),
             'followSymlinks' => array('option' => 'follow_symlinks', 'type' => 'bool', 'default' => 0),
             'checksumIgnore' => array('option' => 'checksum_ignore', 'type' => 'arr', 'default' => array()),
+            'fileIgnoreFolders' => array(
+                'option' => 'file_ignore_folders',
+                'type' => 'string',
+                'default' => "wp-content/cache*"
+            ),
         );
     }
 
