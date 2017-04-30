@@ -159,7 +159,7 @@ class FolderChecksum
         );
         foreach($iterator AS $file) {
             try {
-                if ($this->fnInArray("$dir/$file", $this->ignore)) {
+                if ($this->fnInArray($this->ignore, "$dir/$file")) {
                     continue;
                 }
 
@@ -236,7 +236,13 @@ class FolderChecksum
         return join("\t", $row);
     }
 
-    private function fnInArray($needle, $haystack)
+    /**
+     * @param array $haystack
+     * @param string $needle
+     *
+     * @return bool
+     */
+    private function fnInArray($haystack, $needle)
     {
         # this function allows wildcards in the array to be searched
         $needle = substr($needle, strlen($this->basePath));
