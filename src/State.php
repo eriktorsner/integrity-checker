@@ -38,8 +38,11 @@ class State
         if (!$procStatus) {
             $procStatus = $this->noState();
         }
-        $procStatus->startedIso = date('Y-m-d H:i:s', $procStatus->started);
-        $procStatus->finishedIso = date('Y-m-d H:i:s', $procStatus->finished);
+
+        $wpTimeZoneOffset = 3600 * get_option('gmt_offset', 0);
+
+        $procStatus->startedIso = date('Y-m-d H:i:s', $procStatus->started + $wpTimeZoneOffset);
+        $procStatus->finishedIso = date('Y-m-d H:i:s', $procStatus->finished + $wpTimeZoneOffset);
 
         $procStatus = apply_filters($this->slug . '_test_state', $procStatus);
 
