@@ -12,7 +12,7 @@
  * Plugin Name:       Integrity Checker
  * Plugin URI:        https://www.wpessentials.io/plugins/integrity-checker/
  * Description:       Check your WordPress installation for integrity issues, inconsistencies and potential security problems
- * Version:           0.9.3
+ * Version:           0.10.0
  * Author:            Erik Torsner, Torgesta Technology AB
  * Author URI:        http://erik.torgesta.com
  * License:           GPL-2.0+
@@ -29,7 +29,7 @@ iCheckBootstrap();
 
 function iCheckBootstrap()
 {
-    $pluginVersion = '0.9.3';
+    $pluginVersion = '0.10.0';
 	if (defined('DOING_AJAX') && DOING_AJAX) {
 		return;
 	}
