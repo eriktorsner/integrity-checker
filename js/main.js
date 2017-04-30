@@ -49,6 +49,11 @@ jQuery(document).ready(function($) {
      */
     rest = function (method, endpoint, postData, f, fError, headers) {
         var base = integrityCheckerApi.url;
+
+        if (base.includes('rest_route=')) {
+            endpoint = endpoint.replace('?', '&');
+        }
+
         var intendedMethod = method;
         if (method == 'PUT' || method == 'PATCH' || method == 'DELETE') {
             method = 'POST';
@@ -138,6 +143,19 @@ jQuery(document).ready(function($) {
         startSpin(startScanBtn);
         var scanType = startScanBtn.data('scantype');
 
+        switch (scanType) {
+            case 'checksum':
+                showDivLoading($('#checksum-scan-results'));
+                break;
+            case 'files':
+                showDivLoading($('#files-ownerandpermission-scan-results'));
+                showDivLoading($('#files-monitor-scan-results'));
+                break;
+            case 'settings':
+                showDivLoading($('#settings-scan-results'));
+                break;
+        }
+
         var state = {state:'started', source:'manual'};
         putRest('/integrity-checker/v1/process/status/' + scanType, state, function(data) {
             renderResults(data, scanType, startScanBtn);
@@ -214,12 +232,15 @@ jQuery(document).ready(function($) {
             startScanBtn.html(startScanBtn.data('orgtxt'));
             switch (scanType) {
                 case 'checksum':
+                    showDivLoading($('#checksum-scan-summary'));
                     renderChecksumScanResults();
                     break;
                 case 'files':
+                    showDivLoading($('#files-scan-summary'));
                     renderFilesScanResults();
                     break;
                 case 'settings':
+                    showDivLoading($('#settings-scan-summary'));
                     renderSettingsScanResults();
                     break;
             }
@@ -249,6 +270,7 @@ jQuery(document).ready(function($) {
             scanSummary.html('');
             var summaryTmpl = wp.template('settingsSummaryTmpl');
             $('<div></div>').html(summaryTmpl(data)).appendTo(scanSummary);
+            hideDivLoading(scanSummary);
         });
 
         getRest('/integrity-checker/v1/testresult/settings' + '?esc=1', function (data) {
@@ -268,6 +290,7 @@ jQuery(document).ready(function($) {
                     $('<div></div>').html(issuesTmpl(object)).appendTo(scanResults);
                 }
             });
+            hideDivLoading(scanResults);
         });
     }
 
@@ -285,6 +308,7 @@ jQuery(document).ready(function($) {
             scanSummary.html('');
             var summaryTmpl = wp.template('filesSummaryTmpl');
             $('<div></div>').html(summaryTmpl(data)).appendTo(scanSummary);
+            hideDivLoading(scanSummary);
         });
 
         getRest('/integrity-checker/v1/testresult/files' + '?esc=1', function (data) {
@@ -329,6 +353,9 @@ jQuery(document).ready(function($) {
                     ]
                 });
 
+                hideDivLoading(scanPermResults);
+                hideDivLoading(scanMonitorResults);
+
             }
         });
     }
@@ -344,10 +371,12 @@ jQuery(document).ready(function($) {
             scanSummary.html('');
             var summaryTmpl = wp.template('checksumSummaryTmpl');
             $('<div></div>').html(summaryTmpl(data)).appendTo(scanSummary);
+            hideDivLoading(scanSummary);
         });
 
         getRest('/integrity-checker/v1/testresult/checksum' + '?esc=1', function (data) {
             scanResults.html('');
+            hideDivLoading(scanResults);
 
             if (!data.data) {
                 return;
@@ -398,7 +427,7 @@ jQuery(document).ready(function($) {
      */
     function getProcessStatus(process, f) {
         now = Math.round(+new Date()/1000);
-        if (processStatus && processStatus.ts < (now + 15)) {
+        if (processStatus && (processStatus.ts > (now + 15))) {
             if (f) f(processStatus.data[process]);
             return;
         }
@@ -578,3 +607,12 @@ function startSpin(btn) {
     btn.html('<i class="fa fa-spinner fa-spin"></i>');
     btn.prop("disabled", true);
 }
+
+function showDivLoading(div) {
+    div.addClass('div-loading');
+}
+
+function hideDivLoading(div) {
+    div.removeClass('div-loading');
+}
+
