@@ -98,7 +98,6 @@ class integrityChecker
         $this->backgroundProcess = $backgroundProcess;
 
         $this->pluginSlug = $settings->slug;
-
         $this->scheduledScanCron = $this->pluginSlug . '_scheduled_scan';
     }
 
@@ -120,6 +119,9 @@ class integrityChecker
 
         // Load plugin text domain
         $this->loadPluginTextdomain();
+
+        // did we upgrade to a new version?
+        $this->checkUpgradedVersion();
 
         // ensure correct DB version
         $this->checkDbVersion();
@@ -179,6 +181,31 @@ class integrityChecker
         $currentDbVersion = get_option($this->pluginSlug . '_dbversion', 0);
         if ($currentDbVersion != $this->dbVersion) {
             $this->createTables();
+        }
+    }
+
+    private function checkUpgradedVersion()
+    {
+        $lastKnownVersion = get_option($this->pluginSlug . '_version', '0.0.1');
+        if (version_compare($lastKnownVersion, INTEGRITY_CHECKER_VERSION) == -1) {
+            switch (true) {
+                case (version_compare($lastKnownVersion, '0.10.0') < 1):
+                    // Any version before 0.10.0
+                    // copy API-key to new option name
+                    $apiKey = get_option('wp_checksum_apikey', false);
+                    if ($apiKey != false) {
+                        update_option($this->pluginSlug . '_apikey', $apiKey);
+                        delete_option('wp_checksum_apikey');
+                    }
+                    $siteId = get_option('wp_checksum_siteid', false);
+                    if ($siteId != false) {
+                        update_option($this->pluginSlug . '_siteid', $siteId);
+                        delete_option('wp_checksum_siteid');
+                    }
+            }
+
+            update_option($this->pluginSlug . '_version', INTEGRITY_CHECKER_VERSION);
+
         }
     }
 
