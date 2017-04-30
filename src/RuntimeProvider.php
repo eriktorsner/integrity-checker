@@ -7,6 +7,7 @@ class RuntimeProvider implements ServiceProviderInterface
 {
     public function register(Container $pimple)
     {
+
         $slug = 'integrity-checker';
         $tests = array(
             'checksum' => 'integrityChecker\Tests\Checksum',
@@ -51,8 +52,12 @@ class RuntimeProvider implements ServiceProviderInterface
             return new \integrityChecker\Admin\AdminPage($pimple['settings']);
         };
 
+        $pimple['wpapi'] = function ($pimple) {
+            return new \integrityChecker\WPApi();
+        };
+
         $pimple['fileDiff'] = function ($pimple) {
-            return new \integrityChecker\FileDiff($pimple['apiClient']);
+            return new \integrityChecker\FileDiff($pimple['apiClient'], $pimple['wpapi']);
         };
 
         $pimple['interityChecker'] = function ($pimple) {
