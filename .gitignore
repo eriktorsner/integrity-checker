@@ -2,3 +2,4 @@ vendor/
 build/
 svnrepo/
 tests/fixtures/var
+composer.lock
