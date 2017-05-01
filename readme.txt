@@ -2,7 +2,7 @@
 Contributors: eriktorsner
 Tags: checksum, security, security, secure, security plugin, wordpress security, permissions
 Requires at least: 4.4
-Tested up to: 4.7
+Tested up to: 4.7.4
 Stable tag: 0.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -30,6 +30,9 @@ Lastly, Integrity-checker will look through some of the basic WordPress configur
 
 [silexphp/Pimple](https://github.com/silexphp/Pimple/) copyright Fabien Potencier, see [license](https://github.com/silexphp/Pimple/blob/v3.0.2/LICENSE). Pimple is slightly adopted to use the Integrity Checker namespace to avoid potential conflicts.
 
+[DataTables](https://datatables.net) 1.10.13 copyright 2008-2016 SpryMedia Ltd. Licensed under the MIT license, see [datatables.net/license](https://datatables.net/license)
+
+[jqCron.js](https://github.com/arnapou/jqcron) Licensed under the MIT license, see [license](https://github.com/arnapou/jqcron/blob/master/LICENSE)
 
 == Installation ==
 
@@ -102,10 +105,15 @@ The API keys can be shared between different WordPress installations and between
 
 == Changelog ==
 
-= 0.9.4 =
+= 0.10.0 =
+* Feature: Improved file scanner, store results in custom table
+* Feature: Added detailed settings for file scanner
+* Feature: Scheduler (requires registration)
 * Feature: Support for alternative checksum data, reduces the risk for false positives
-* Feature: Reinstall compromised plugins
+* Feature: Reinstall compromised plugins via plugin screen
 * Fix: Missed-wp-version-meta in version leak test. reported by @sixer
+* Fix: REST calls would not work at all on sites without pretty permalinks
+* Fix: Previous versions would store too much result data in auto loading options
 
 = 0.9.3 =
 * First version on WordPress repo
