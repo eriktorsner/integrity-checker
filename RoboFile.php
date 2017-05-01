@@ -194,7 +194,7 @@ class RoboFile extends \Robo\Tasks
         exec("rm -rf {$this->buildBase}-test");
         $cmd = "git clone {$this->gitRemote}";
         if ($version != 'master') {
-            $cmd .= " --branch Release/$version";
+            $cmd .= " --branch $version";
         }
 
         $cmd.= " --single-branch {$this->buildBase}";
