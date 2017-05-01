@@ -1,19 +1,49 @@
 <?php
 /**
- * This is project's console commands configuration for Robo task runner.
+ * This is Integrity Checker's console commands configuration for Robo task runner.
  *
  * @see http://robo.li/
  */
 class RoboFile extends \Robo\Tasks
 {
-    private $svnRemote = 'https://eriktorsner@plugins.svn.wordpress.org/integrity-checker';
-    private $gitRemote = 'git@github.com:eriktorsner/integrity-checker.git';
+    /**
+     * @var string
+     */
     private $slug = 'integrity-checker';
+
+    /**
+     * @var string
+     */
+    private $svnRemote = 'https://eriktorsner@plugins.svn.wordpress.org/integrity-checker';
+
+    /**
+     * @var string
+     */
+    private $gitRemote = 'git@github.com:eriktorsner/integrity-checker.git';
+
+
+    /**
+     * Files/folders that should NOT be copied to the svn repo
+     * (assets are handled separately)
+     *
+     * @var array
+     */
     private $excludeSvn = ['build', 'tests', 'phpunit.xml', 'RoboFile.php', 'composer.lock', 'travis',
-        '.travis.yml', '.idea'];
+        '.travis.yml', '.idea', '.git', '.gitignore', 'svnrepo', 'assets'];
+
+    /**
+     * @var string
+     */
     private $svnDir;
+
+    /**
+     * @var string
+     */
     private $buildBase;
 
+    /**
+     * RoboFile constructor.
+     */
     public function __construct()
     {
         $this->svnDir = __DIR__ . '/build/svnrepo/' . $this->slug;
@@ -42,7 +72,7 @@ class RoboFile extends \Robo\Tasks
     }
 
     /**
-     * Grab the current version of the git working directory (I know)
+     * Checkout the relevant
      * and publish it as a new version on the WordPress repo named after
      * the current latest git tag.
      *
@@ -81,13 +111,16 @@ class RoboFile extends \Robo\Tasks
 
     }
 
+    /**
+     * For dry running the publish process.
+     * @param $version
+     */
     public function testpublish($version)
     {
         $this->stopOnFail(true);
 
         // Checkout a pure version from git
-        // Testpublish always use master
-        $this->gitClone();
+        $this->gitClone($version);
 
         // Ensure tests are OK
         $this->test();
@@ -104,10 +137,13 @@ class RoboFile extends \Robo\Tasks
         // Create the tag (copy from trunk)
         $this->createSvnTag($version);
 
+        // Notably, when testing, we never commit to the
+        // svn repo
+
     }
 
     /**
-     * Run all tests
+     * Run all tests (inside the build folder)
      *
      * @return mixed
      */
@@ -120,6 +156,9 @@ class RoboFile extends \Robo\Tasks
     }
 
     /**
+     * Ensure we have the correct versions in
+     * plugin base file and readme.txt
+     *
      * @param $version
      */
     public function versionfix($version)
@@ -141,13 +180,21 @@ class RoboFile extends \Robo\Tasks
 
     }
 
+    /**
+     * Clone code from github into the build folder
+     * Make 2 copies:
+     * (1) intended for publishing to the WordPress repo without dev dependencies.
+     * (2) intended for running local tests, including dev dependencies.
+     *
+     * @param string $version
+     */
     private function gitClone($version = 'master')
     {
         exec("rm -rf {$this->buildBase}");
         exec("rm -rf {$this->buildBase}-test");
         $cmd = "git clone {$this->gitRemote}";
         if ($version != 'master') {
-            $cmd .= " --branch $version";
+            $cmd .= " --branch Release/$version";
         }
 
         $cmd.= " --single-branch {$this->buildBase}";
@@ -159,7 +206,7 @@ class RoboFile extends \Robo\Tasks
     }
 
     /**
-     * Get a fresh copy of the SVN repo
+     * Get a fresh copy of the SVN repo into the build folder
      */
     private function svnCheckout()
     {
@@ -177,11 +224,12 @@ class RoboFile extends \Robo\Tasks
 
 
     /**
+     * Copy all files from build/$slug folder into the svn trunk
+     *
      * @param $version
      */
     private function copyToSvnTrunk($version)
     {
-        $exclude = array_merge($this->excludeSvn, ['.git', '.gitignore', 'svnrepo', 'assets']);
         $existing = array_diff(scandir("{$this->buildBase}"), ['.', '..']);
 
         // Blank out trunk and assets
@@ -192,21 +240,35 @@ class RoboFile extends \Robo\Tasks
 
         // Copy all files to trunk
         foreach ($existing as $file) {
-            if (!in_array(trim(basename($file)), $exclude)) {
+            if (!in_array(trim(basename($file)), $this->excludeSvn)) {
                 $this->say("rsync -ra {$this->buildBase}/$file {$this->svnDir}/trunk");
                 exec("rsync -ra {$this->buildBase}/$file {$this->svnDir}/trunk");
             }
         }
 
-        // Copy to assets
+        // Copy to assets separately
         $this->say("rsync -ra {$this->buildBase}/assets/ {$this->svnDir}/assets");
         exec("rsync -ra {$this->buildBase}/assets/ {$this->svnDir}/assets");
 
         // add all files to svn
         $this->taskSvnStack()->add("--force trunk/*")->dir($this->svnDir)->run();
         $this->taskSvnStack()->add("--force assets/*")->dir($this->svnDir)->run();
+
+        // find deleted files
+        $result = $this->taskExec("svn status {$this->svnDir} | grep \"!\"")->run();
+        $files = explode("\n", trim($result->getMessage()));
+        foreach ($files as $file) {
+            $file = trim(ltrim($file, '!'));
+            $this->taskExec("svn delete {$file}")->run();
+        }
     }
 
+
+    /**
+     * Create a new tag in SVN and copy the current trunk.
+     *
+     * @param $version
+     */
     private function createSvnTag($version)
     {
 
@@ -216,11 +278,19 @@ class RoboFile extends \Robo\Tasks
     }
 
 
+    /**
+     * Commit all changes in the svn folder back to the repo
+     *
+     * @param $version
+     */
     private function svnCommit($version)
     {
         $this->taskSvnStack()->commit("Version $version")->dir($this->svnDir)->run();
     }
 
+    /**
+     * @return mixed
+     */
     private function latestSvnTag()
     {
         $tags = scandir($this->svnDir . '/tags');
@@ -230,6 +300,11 @@ class RoboFile extends \Robo\Tasks
         return end($tags);
     }
 
+    /**
+     * @param $version
+     *
+     * @return bool
+     */
     private function verifyVersions($version)
     {
         $readMe = stripos(file_get_contents('readme.txt'), $version);
