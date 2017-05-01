@@ -7,8 +7,16 @@
 class RoboFile extends \Robo\Tasks
 {
     private $svnRemote = 'https://eriktorsner@plugins.svn.wordpress.org/integrity-checker';
+    private $gitRemote = 'git@github.com:eriktorsner/integrity-checker.git';
     private $slug = 'integrity-checker';
-    private $excludeSvn = ['build', 'tests', 'phpunit.xml', 'RoboFile.php', 'composer.lock'];
+    private $excludeSvn = ['build', 'tests', 'phpunit.xml', 'RoboFile.php', 'composer.lock', 'travis',
+        '.travis.yml', '.idea'];
+    private $svnDir;
+
+    public function __construct()
+    {
+        $this->svnDir = __DIR__ . '/build/svnrepo/' . $this->slug;
+    }
 
     /**
      * Tag the current version in git and push the
@@ -45,35 +53,54 @@ class RoboFile extends \Robo\Tasks
     public function publish()
     {
         $this->stopOnFail(true);
+
+        // Checkout a pure version from git
+        $this->gitClone();
+
         // Ensure tests are OK
         $this->test();
-
-        // Git version
-        $gitVersion = exec('git describe --abbrev=0 --tags');
-
-        // Check that git tag matches wp files version
-        if (!$this->verifyVersions($gitVersion)) {
-            $this->yell(
-                "Latest git version ($gitVersion) doesn't match plugin version info. Aborting",
-                40,
-                'red');
-            return;
-        }
 
         // Ensure we have latest SVN checked out
         $this->svnCheckout();
 
-        // Ensure the git tag is newer/higher than the one in SVN
-        $svnVersion = $this->latestSvnTag();
-        if (version_compare($gitVersion , $svnVersion) != 1) {
-            $this->yell("Latest git tag is not higher than latest svn tag. Aborting", 40, 'red');
-            return;
-        }
+        // ensure version is fixed in all files
+        $this->versionfix($version);
 
         // Copy files to svn trunk
-        $this->copyToSvnTrunk($gitVersion);
+        $this->copyToSvnTrunk($version);
+
+        // Create the tag (copy from trunk)
+        $this->createSvnTag($version);
+
+
+        // Commit to repo;
+        $this->svnCommit($gitVersion);
 
         $this->say("All done");
+
+    }
+
+    public function testpublish($version)
+    {
+        $this->stopOnFail(true);
+
+        // Checkout a pure version from git
+        $this->gitClone();
+
+        // Ensure tests are OK
+        $this->test();
+
+        // Ensure we have latest SVN checked out
+        $this->svnCheckout();
+
+        // ensure version is fixed in all files
+        $this->versionfix($version);
+
+        // Copy files to svn trunk
+        $this->copyToSvnTrunk($version);
+
+        // Create the tag (copy from trunk)
+        $this->createSvnTag($version);
 
     }
 
@@ -85,8 +112,9 @@ class RoboFile extends \Robo\Tasks
     public function test()
     {
         return $this->taskPHPUnit()
-             ->bootstrap('tests/bootstrap.php')
-             ->run();
+            ->args(['--testsuite=Unit'])
+            ->dir("build/{$this->slug}-test")
+            ->run();
     }
 
     /**
@@ -94,21 +122,39 @@ class RoboFile extends \Robo\Tasks
      */
     public function versionfix($version)
     {
-        $this->taskReplaceInFile('readme.txt')
+        $base = "build/{$this->slug}";
+        $this->taskReplaceInFile("$base/readme.txt")
              ->regex('~Stable tag:\s.*~')
              ->to('Stable tag: ' . $version)
              ->run();
 
-        $this->taskReplaceInFile($this->slug . '.php')
+        $this->taskReplaceInFile("$base/{$this->slug}.php")
              ->regex('~Version:\s*.*~')
              ->to('Version:           ' . $version)
              ->run();
 
-        $this->taskReplaceInFile($this->slug . '.php')
+        $this->taskReplaceInFile("$base/{$this->slug}.php")
              ->regex('~\$pluginVersion\s*\=.*;~')
              ->to("\$pluginVersion = '$version';")
              ->run();
 
+    }
+
+    private function gitClone($version = 'master')
+    {
+        exec("rm -rf build/{$this->slug}");
+        exec("rm -rf build/{$this->slug}-test");
+        $cmd = "git clone {$this->gitRemote}";
+        if ($version != 'master') {
+            $cmd .= " --branch $version";
+        }
+
+        $cmd.= " --single-branch build/{$this->slug}";
+        exec($cmd);
+        exec("cp -a build/{$this->slug} build/{$this->slug}-test");
+
+        exec("composer install --no-dev -d build/{$this->slug}");
+        exec("composer install -d build/{$this->slug}-test");
     }
 
     /**
@@ -116,13 +162,15 @@ class RoboFile extends \Robo\Tasks
      */
     private function svnCheckout()
     {
-        $svnDir = __DIR__ . '/svnrepo';
-        exec("rm -rf $svnDir");
-        mkdir($svnDir);
+        $svnBase = dirname($this->svnDir);
+        exec("rm -rf $svnBase");
+        exec("mkdir -p $svnBase");
+
+        $this->say("Cleaned and recreated $svnBase");
 
         $this->taskSvnStack()
              ->checkout($this->svnRemote)
-             ->dir($svnDir)
+             ->dir($svnBase)
              ->run();
     }
 
@@ -132,40 +180,49 @@ class RoboFile extends \Robo\Tasks
      */
     private function copyToSvnTrunk($version)
     {
-        $svnDir = __DIR__ . '/svnrepo/' . $this->slug;
-
         $exclude = array_merge($this->excludeSvn, ['.git', '.gitignore', 'svnrepo', 'assets']);
-        $existing = array_diff(scandir(__DIR__), ['.', '..']);
+        $existing = array_diff(scandir("build/{$this->slug}"), ['.', '..']);
+
+        // Blank out trunk and assets
+        exec("rm -rf {$this->svnDir}/trunk");
+        exec("rm -rf {$this->svnDir}/assets");
+        exec("mkdir {$this->svnDir}/trunk");
+        exec("mkdir {$this->svnDir}/assets");
 
         // Copy all files to trunk
         foreach ($existing as $file) {
-            if (!in_array(trim($file), $exclude)) {
-                $this->say("rsync -ra $file $svnDir/trunk");
-                exec("rsync -ra $file $svnDir/trunk");
+            if (!in_array(trim(basename($file)), $exclude)) {
+                $this->say("rsync -ra build/{$this->slug}/$file {$this->svnDir}/trunk");
+                exec("rsync -ra build/{$this->slug}/$file {$this->svnDir}/trunk");
             }
         }
-        $this->say("rsync -ra assets $svnDir/assets");
-        exec("rsync -ra assets $svnDir");
+
+        // Copy to assets
+        $this->say("rsync -ra build/{$this->slug}/assets/ {$this->svnDir}/assets");
+        exec("rsync -ra build/{$this->slug}/assets/ {$this->svnDir}/assets");
 
         // add all files to svn
-        $this->taskSvnStack()->add("--force trunk/*")->dir("$svnDir")->run();
-        $this->taskSvnStack()->add("--force assets/*")->dir("$svnDir")->run();
+        $this->taskSvnStack()->add("--force trunk/*")->dir($this->svnDir)->run();
+        $this->taskSvnStack()->add("--force assets/*")->dir($this->svnDir)->run();
+    }
 
-        // commit them with proper tag
-        $this->taskSvnStack()->commit("Version $version")->dir("$svnDir")->run();
+    private function createSvnTag($version)
+    {
 
         $this->taskExec("svn cp trunk tags/$version")
-            ->dir($svnDir)
-            ->run();
+             ->dir($this->svnDir)
+             ->run();
+    }
 
-        $this->taskSvnStack()->commit("tagging version $version")->dir("$svnDir")->run();
 
+    private function svnCommit($version)
+    {
+        $this->taskSvnStack()->commit("Version $version")->dir($this->svnDir)->run();
     }
 
     private function latestSvnTag()
     {
-        $svnDir = __DIR__ . '/svnrepo/' . $this->slug;
-        $tags = scandir($svnDir . '/tags');
+        $tags = scandir($this->svnDir . '/tags');
         $tags = array_diff($tags, ['.', '..']);
 
         sort($tags);
