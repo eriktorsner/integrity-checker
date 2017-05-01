@@ -95,6 +95,9 @@ Because we need to eat and pay bills. We'd like our database to be 100% free for
 
 The API keys can be shared between different WordPress installations and between Integrity Checker and the wp-cli tool so if you're hosting 10-20 WordPress installations on a few different server, you'll only need to get one premium subscription. If you're a hosting provider looking to analyze all your clients installations, we suggest you contact us.
 
+= Can I help? =
+
+Absolutely! Integrity Checker is open source and pull requests are welcome. We use github for our ongoing development efforts. Have a look at https://github.com/eriktorsner/integrity-checker
 
 == Screenshots ==
 
