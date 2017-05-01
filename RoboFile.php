@@ -120,7 +120,8 @@ class RoboFile extends \Robo\Tasks
         $this->stopOnFail(true);
 
         // Checkout a pure version from git
-        $this->gitClone($version);
+        // When testing, we're checking out master
+        $this->gitClone('master');
 
         // Ensure tests are OK
         $this->test();
