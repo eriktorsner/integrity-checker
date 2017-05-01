@@ -3,3 +3,4 @@ build/
 svnrepo/
 tests/fixtures/var
 composer.lock
+.idea
